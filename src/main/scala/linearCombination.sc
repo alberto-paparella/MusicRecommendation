@@ -20,7 +20,20 @@ def linearCombination(userBased:List[(String,String,Double)],itemBased:List[(Str
   }
 }
 
-val linearCombined = linearCombination(userBasedModel,itemBasedModel,0.5) sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1)
+def time[R](block: => R): R = {
+  // get start time
+  val t0 = System.nanoTime()
+  // execute code
+  val result = block
+  // get end time
+  val t1 = System.nanoTime()
+  // print elapsed time
+  println("Elapsed time: " + (t1 - t0)/1000000 + "ms")
+  // return the result
+  result
+}
+
+val linearCombined = time(linearCombination(userBasedModel,itemBasedModel,0.5)) sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1)
 
 val file = new File(getClass.getClassLoader.getResource("models/linearCombination.txt").getPath)
 val bw = new BufferedWriter(new FileWriter(file))
