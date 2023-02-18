@@ -13,8 +13,6 @@ directory. Once executed, the results of the training will be available through 
 algorithm which can be found under `target/scala-2.13/classes/models/`. Make sure to also have an empty file in
 `src/main/resources/models/` with the same name of the model (in case not, create it, as it will be used to dynamically
 create the path for the output model, which will still be found under the `target/scala-2.13/classes/models/` path).
-Once the basic models have been calculated, be sure to copy them from `target/scala-2.13/classes/models/` to
-`src/main/resources/models/`.
 
 We plan to implement the following algorithms:
 - UserBasedModel
