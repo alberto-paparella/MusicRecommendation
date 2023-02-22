@@ -7,4 +7,7 @@ lazy val root = (project in file("."))
     name := "MusicRecommendation"
   )
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.0"
+libraryDependencies ++= Seq(
+  "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
+  "org.apache.spark" %% "spark-core" % "3.3.2"
+)
