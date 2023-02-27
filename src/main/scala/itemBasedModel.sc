@@ -11,9 +11,9 @@ val songs = in.getLines().toList map (line => line split "\t" slice(1,2) mkStrin
 val users = in.getLines().toList map (line => line split "\t" slice(0,1) mkString) distinct
 
 // TEST-ONLY: this is a subset of all users
-val usedUsers = users slice(0,200)
+val usedUsers = users slice(0,100)
 // TEST-ONLY: this is a subset of all songs
-val usedSongs = songs slice(0,200)
+val usedSongs = songs slice(0,100)
 
 // given a user, it returns a list of all the songs (s)he listened to
 def songsFilteredByUser(user:String) :List[String] = (for {
@@ -31,14 +31,23 @@ def numerator(song1: String, song2: String, user: String): Int =
 
 // it calculates the cosine similarity between two songs
 def cosineSimilarity(song1: String, song2: String): Double = {
-  // for each user, check if (s)he has listened to both the songs
+  /*// for each user, check if (s)he has listened to both the songs
   val sameUsers = (usedUsers map (user => numerator(song1, song2, user))).sum
   // for each song, if user1 has listened to it sum 1 and at the end apply the square root
   val rootSong1 = sqrt((usedUsers map (user => if (usersToSongsMap(user).contains(song1)) 1 else 0)).sum)
   // for each song, if user2 has listened to it sum 1 and at the end apply the square root
   val rootSong2 = sqrt((usedUsers map (user => if (usersToSongsMap(user).contains(song2)) 1 else 0)).sum)
   // calculate cosine similarity
-  sameUsers / (rootSong1*rootSong2)
+  sameUsers / (rootSong1*rootSong2)*/
+
+  val a = usedUsers.map(user => (numerator(song1, song2, user),
+                                  if (usersToSongsMap(user).contains(song1)) 1 else 0,
+                                  if (usersToSongsMap(user).contains(song2)) 1 else 0
+                                ))
+  val u = a.fold((0, 0, 0)) {
+    (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)
+  }
+  u._1 / ((sqrt(u._2)) * (sqrt(u._3)))
 }
 
 

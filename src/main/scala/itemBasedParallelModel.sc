@@ -7,19 +7,36 @@ import scala.collection.parallel.ParSeq
 
 def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_triplets_2048.txt").getPath)
 
+trait ArrayTree[A] { val size: Int }
+case class ArrayLeaf[A](a: Array[A]) extends ArrayTree[A] {
+  override val size = a.size
+}
+case class ArrayNode[A](l: ArrayTree[A], r: ArrayTree[A]) extends ArrayTree[A] {
+  override val size = l.size + r.size
+}
+def sizeLeaf = 915
+
+def createTree(list: Array[String], start: Int, leafSize: Int): ArrayTree[String] = {
+  if (list.length <= leafSize) new ArrayLeaf[String]( list.drop(start).take(leafSize) )
+  else new ArrayNode[String](createTree(list, 0, leafSize/2),createTree(list, leafSize/2, leafSize))
+}
+
 // load all songs
-val songs = in.getLines().toList.par map (line => line split "\t" slice(1,2) mkString) distinct
+val songs = in.getLines().toArray map (line => line split "\t" slice(1,2) mkString) distinct
 // load all users
-val users = in.getLines().toList.par map (line => line split "\t" slice(0,1) mkString) distinct
+val users = in.getLines().toArray map (line => line split "\t" slice(0,1) mkString) distinct
+
+val songsTree = createTree(songs, 0, songs.length/2)
+val usersTree = createTree(users, 0, users.length/2)
 
 // TEST-ONLY: this is a subset of all users
-val usedUsers = users slice(0,200)
+val usedUsers = users par //slice(0,100)
 // TEST-ONLY: this is a subset of all songs
-val usedSongs = songs slice(0,200)
+val usedSongs = songs par //slice(0,100)
 
 // given a user, it returns a list of all the songs (s)he listened to
-def songsFilteredByUser(user:String) : ParSeq[String] = (for {
-  line <- in.getLines().toList.par.filter(line => line.contains(user))
+def songsFilteredByUser(user:String) : List[String] = (for {
+  line <- in.getLines().toList.filter(line => line.contains(user))
 } yield line split "\t" match {
   case Array(_, song, _) => song
 }) distinct
@@ -35,17 +52,28 @@ def numerator(song1: String, song2: String, user: String): Int = {
 
 // it calculates the cosine similarity between two songs
 def cosineSimilarity(song1: String, song2: String): Double = {
-  // for each user, check if (s)he has listened to both the songs
+  /*// for each user, check if (s)he has listened to both the songs
   val sameUsers = (usedUsers map (user => numerator(song1, song2, user))).sum
   // for each song, if user1 has listened to it sum 1 and at the end apply the square root
   val rootSong1 = sqrt((usedUsers map (user => if (usersToSongsMap(user).exists(_ == song1)) 1 else 0)).sum)
   // for each song, if user2 has listened to it sum 1 and at the end apply the square root
   val rootSong2 = sqrt((usedUsers map (user => if (usersToSongsMap(user).exists(_ == song2)) 1 else 0)).sum)
   // calculate cosine similarity
-  sameUsers / (rootSong1 * rootSong2)
+  sameUsers / (rootSong1 * rootSong2)*/
+
+
+
+  val a = usedUsers.map(user => (numerator(song1, song2, user),
+                                  if (usersToSongsMap(user).exists(_ == song1)) 1 else 0,
+                                  if (usersToSongsMap(user).exists(_ == song2)) 1 else 0))
+  val b = a.aggregate((0,0,0))(
+    (acc, tupl) => (acc._1 + tupl._1, acc._2 + tupl._2, acc._3 + tupl._3),
+    (acc, tupl) => (acc._1 + tupl._1, acc._2 + tupl._2, acc._3 + tupl._3),
+  )
+  b._1 / sqrt(b._2) * sqrt(b._3)
 }
 
-
+/*
 def formula(weightFunction: (String, String) => Double): ParSeq[(String, String, Double)] = {
 
   def specificFormula(user: String, song: String): Double = {
