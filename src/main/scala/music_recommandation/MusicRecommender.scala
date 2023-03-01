@@ -1,6 +1,7 @@
 package music_recommandation
 
 import java.io.{BufferedWriter, File, FileWriter}
+import scala.collection.GenIterable
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
@@ -30,20 +31,14 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
   private val usersToSongsMap = users map (user => (user, songsFilteredByUser(user))) toMap
 
   private def formula(specificFormula: (String, String) => Double): IterableOnce[(String, String, Double)] = {
-
-
-    def rank(): IterableOnce[(String, String, Double)] = {
-      for {
-        u <- usedUsers
-        s <- usedSongs //filter(song => !usersToSongsMap(u).contains(song))
-        if !usersToSongsMap(u).contains(s)
-      } yield {
-        def rank: Double = specificFormula(u,s)
-        (u, s, rank)
-      }
+    for {
+      u <- usedUsers
+      s <- usedSongs //filter(song => !usersToSongsMap(u).contains(song))
+      if !usersToSongsMap(u).contains(s)
+    } yield {
+      def rank: Double = specificFormula(u,s)
+      (u, s, rank)
     }
-
-    rank()
   }
 
   private def time[R](block: => R, modelName: String, parallel: Boolean): R = {
@@ -123,6 +118,37 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
 
     val userBasedModel = time(formula(specificFormula), "user-based model", parallel)
     if(outputFileName != "") writeModelOnFile(userBasedModel, outputFileName)
+  }
+
+  def getLinearCombinationModelRank(alpha: Double, outputFileName: String = "") = {
+    def userModelBasedFile: BufferedSource = Source.fromResource("models/userBasedModel.txt")
+    def itemModelBasedFile: BufferedSource = Source.fromResource("models/itemBasedModel.txt")
+
+    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.IeeeOrdering.reverse)
+    val ubm = userModelBasedFile.getLines().toList map (line => line split "\t" match {
+      case Array(users,songs,ranks)=>(users,songs,ranks.toDouble)
+    }) sorted ordering
+
+    val ibm = itemModelBasedFile.getLines().toList map (line => line split "\t" match {
+      case Array(users,songs,ranks)=>(users,songs,ranks.toDouble)
+    }) sorted ordering
+
+
+    def linearCombination(): Iterator[(String, String, Double)] = {
+      // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
+      val userItemCouple = if (parallel) ubm.zip(ibm).par else ubm zip ibm
+      // for each pair
+      userItemCouple.iterator.map({
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if(user1 != user2) println("Users different")
+          if(song1 != song2) println("Songs different")
+          // return (user, song, linear combination)
+          (user1, song1, rank1 * alpha + rank2 * (1 - alpha))
+      })
+    }
+
+    val linearCombined = time(linearCombination(), "linear combination model", parallel)
+    if(outputFileName != "") writeModelOnFile(linearCombined, outputFileName)
   }
 
   private def writeModelOnFile(model: IterableOnce[(String, String, Double)], outputFileName: String = "")= {
