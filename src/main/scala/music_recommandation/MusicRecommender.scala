@@ -17,8 +17,10 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
   // load all users
   private val users = in.getLines().toList map (line => line split "\t" slice(0,1) mkString) distinct
 
+  println(s"Songs number:\t${songs.length}\nUsers number:\t${users.length}")
+
   // TEST-ONLY: subset of all users and songs
-  private val (usedSongs, usedUsers) = if(parallel) (songs.par slice(0,100), users.par slice(0,100)) else (songs slice(0,100), users)
+  private val (usedSongs, usedUsers) = if(parallel) (songs.par, users.par) else (songs, users)
 
   // given a user, it returns a list of all the songs (s)he listened to
   private def songsFilteredByUser(user:String) :List[String] = (for {
@@ -65,10 +67,13 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
         if (usersToSongsMap(user).contains(song1)) 1 else 0,
         if (usersToSongsMap(user).contains(song2)) 1 else 0
       ))
+
       val u = usersTuples.fold((0, 0, 0)) {
         (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)
       }
-      u._1 / (sqrt(u._2) * sqrt(u._3))
+
+      val denominator = sqrt(u._2) * sqrt(u._3)
+      if (denominator != 0) u._1 / denominator else 0
     }
 
     def specificFormula(user: String, song: String): Double = {
@@ -78,12 +83,13 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
       }
         yield {
           val listened = if(usersToSongsMap(user).contains(s2)) 1 else 0
-          listened*cosineSimilarity(song, s2)
+          if(listened != 0) listened*cosineSimilarity(song, s2)
+          else 0
         }
     } sum
 
     val itemBasedModel = time(formula(specificFormula), "item-based model", parallel)
-    if(outputFileName != "") writeModelOnFile(itemBasedModel, outputFileName)
+    if(outputFileName != "") time(writeModelOnFile(itemBasedModel, outputFileName), "writing", parallel)
   }
 
   def getUserBasedModelRank(outputFileName: String = "") = {
@@ -100,9 +106,9 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
       val u = usersTuples.fold((0, 0, 0)) {
         (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)
       }
-      val denominator = (sqrt(u._2) * sqrt(u._3))
-      if (denominator != 0) u._1 / denominator
-      else 0
+
+      val denominator = sqrt(u._2) * sqrt(u._3)
+      if (denominator != 0) u._1 / denominator else 0
     }
 
     def specificFormula(user: String, song: String): Double = {
@@ -112,12 +118,13 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
       }
         yield {
           val listened = if(usersToSongsMap(u2).contains(song)) 1 else 0
-          listened*cosineSimilarity(user, u2)
+          if(listened != 0) listened*cosineSimilarity(user, u2)
+          else 0
         }
     } sum
 
     val userBasedModel = time(formula(specificFormula), "user-based model", parallel)
-    if(outputFileName != "") writeModelOnFile(userBasedModel, outputFileName)
+    if(outputFileName != "") time(writeModelOnFile(userBasedModel, outputFileName), "writing", parallel)
   }
 
   def getLinearCombinationModelRank(alpha: Double, outputFileName: String = "") = {
@@ -148,7 +155,7 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
     }
 
     val linearCombined = time(linearCombination(), "linear combination model", parallel)
-    if(outputFileName != "") writeModelOnFile(linearCombined, outputFileName)
+    if(outputFileName != "") time(writeModelOnFile(linearCombined, outputFileName), "writing", parallel)
   }
 
   private def writeModelOnFile(model: IterableOnce[(String, String, Double)], outputFileName: String = "")= {
@@ -158,7 +165,9 @@ class MusicRecommender(private val parallel: Boolean = false, private val fileNa
     // 2. ORDER IT IF IT'S SEQ
       //sorted(Ordering.by[(String, String, Double), Double](_._3) reverse)
     // 3. PRINT IT
-    model.iterator.toSeq sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1) map (el => {
+    model.iterator.toSeq sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1) foreach (el => {
+    //model.iterator.toSeq groupBy(_._1) map (el => {
+    //model.iterator.toSeq sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1) map (el => {
       el._2 map (row => {
         bw.write(s"${row._1}\t${row._2}\t${row._3}\n")
       })
