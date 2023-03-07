@@ -1,37 +1,12 @@
 package music_recommandation
 
 import java.io.{BufferedWriter, File, FileWriter}
-import scala.collection.GenIterable
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.collection.parallel.CollectionConverters._
-import scala.collection.parallel.ParSeq
 
 class MusicRecommender(private val usedUsers: IterableOnce[String], private val usedSongs: IterableOnce[String], private val usersToSongsMap: Map[String, List[String]] ) {
-
-//  private def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
-//
-//  // load all songs
-//  private val songs = in.getLines().toList map (line => line split "\t" slice(1,2) mkString) distinct
-//  // load all users
-//  private val users = in.getLines().toList map (line => line split "\t" slice(0,1) mkString) distinct
-//
-//  println(s"Songs number:\t${songs.length}\nUsers number:\t${users.length}")
-//
-//  // TEST-ONLY: subset of all users and songs
-//  private val (usedSongs, usedUsers) = if(parallel) (songs.par slice(0,100), users.par slice(0,100)) else (songs slice(0,100), users slice(0,100))
-//
-//  // given a user, it returns a list of all the songs (s)he listened to
-//  private def songsFilteredByUser(user:String) :List[String] = (for {
-//    line <- in.getLines().toList.filter(line => line.contains(user))
-//  } yield line split "\t" match {
-//    case Array(_, song, _) => song
-//  }) distinct
-//
-//  // create a map user1->[song1, song2, ...], user2->[song3,...]
-//  private val usersToSongsMap = users map (user => (user, songsFilteredByUser(user))) toMap
-
   private def formula(specificFormula: (String, String) => Double): IterableOnce[(String, String, Double)] = {
     for {
       u <- usedUsers
@@ -51,12 +26,12 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     // get end time
     val t1 = System.nanoTime()
     // print elapsed time
-    println(s"Elapsed time for ${modelName}:\t" + (t1 - t0)/1000000 + "ms")
+    println(s"Elapsed time for $modelName:\t" + (t1 - t0)/1000000 + "ms")
     // return the result
     result
   }
 
-  def getItemBasedModelRank(outputFileName: String = "") = {
+  def getItemBasedModelRank(outputFileName: String = ""): Unit = {
     // if the user listened to both songs return 1, else 0
     def numerator(song1: String, song2: String, user: String): Int =
       if (usersToSongsMap(user).contains(song1) && usersToSongsMap(user).contains(song2)) 1 else 0
@@ -80,7 +55,7 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
       for {
         s2 <- usedSongs //filter (s => s != song) //filter deprecated
         if s2 != song
-        if(usersToSongsMap(user).contains(s2))
+        if usersToSongsMap(user).contains(s2)
       } yield { cosineSimilarity(song, s2) }
     } sum
 
@@ -88,7 +63,7 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     if(outputFileName != "") time(writeModelOnFile(itemBasedModel, outputFileName), "writing")
   }
 
-  def getUserBasedModelRank(outputFileName: String = "") = {
+  def getUserBasedModelRank(outputFileName: String = ""): Unit = {
     // if both user listened to the same song return 1, else 0
     def numerator(user1:String, user2: String, song:String): Int =
       if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song)) 1 else 0
@@ -111,7 +86,7 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
       for {
         u2 <- usedUsers //filter (u => u != user)   // filter deprecated
         if u2 != user
-        if(usersToSongsMap(u2).contains(song))
+        if usersToSongsMap(u2).contains(song)
       } yield { cosineSimilarity(user, u2) }
     } sum
 
@@ -119,7 +94,7 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     if(outputFileName != "") time(writeModelOnFile(userBasedModel, outputFileName), "writing")
   }
 
-  def getLinearCombinationModelRank(alpha: Double, parallel: Boolean = false, outputFileName: String = "") = {
+  def getLinearCombinationModelRank(alpha: Double, parallel: Boolean = false, outputFileName: String = ""): Unit = {
     def userModelBasedFile: BufferedSource = Source.fromResource("models/userBasedModel.txt")
     def itemModelBasedFile: BufferedSource = Source.fromResource("models/itemBasedModel.txt")
 
@@ -150,7 +125,7 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     if(outputFileName != "") time(writeModelOnFile(linearCombined, outputFileName), "writing")
   }
 
-  private def writeModelOnFile(model: IterableOnce[(String, String, Double)], outputFileName: String = "")= {
+  private def writeModelOnFile(model: IterableOnce[(String, String, Double)], outputFileName: String = ""): Unit = {
     val f = new File(getClass.getClassLoader.getResource(outputFileName).getPath)
     val bw = new BufferedWriter(new FileWriter(f))
     model.iterator foreach (el => {

@@ -3,7 +3,7 @@ import scala.language.postfixOps
 import scala.io.{BufferedSource, Source}
 import scala.math.sqrt
 
-def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_triplets_2048.txt").getPath)
+def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_triplets_10k.txt").getPath)
 
 // load all songs
 val songs = in.getLines().toList map (line => line split "\t" slice(1,2) mkString) distinct

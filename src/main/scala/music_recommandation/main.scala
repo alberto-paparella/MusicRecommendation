@@ -1,25 +1,33 @@
-package music_recommandation;
-import music_recommandation.MusicRecommender
+package music_recommandation
 
 import scala.io.{BufferedSource, Source}
-import scala.language.postfixOps;
+import scala.language.postfixOps
 import scala.collection.parallel.CollectionConverters._
-import scala.collection.parallel.ParSeq
 
 object main {
-  def main(args: Array[String]) = {
-
-    val fileName: String = "train_triplets_10k.txt"
+  def main(args: Array[String]): Unit = {
+    // 0: sequential, 1: parallel, 2: distributed
+    val execution = 1
+    // name of the file containing the considered dataset
+    val fileName: String = "train_triplets_50k.txt"
+    // import dataset
     def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
-
+    // load all users
+    val users = in.getLines().toList map (line => line split "\t" slice(0, 1) mkString) distinct
+    // load all songs
     val songs = in.getLines().toList map (line => line split "\t" slice(1,2) mkString) distinct
-    val users = in.getLines().toList map (line => line split "\t" slice(0,1) mkString) distinct
 
+    // TEST-ONLY: print number of total users and songs in the file (as we may work on smaller files)
     println(s"Songs number:\t${songs.length}\nUsers number:\t${users.length}")
-
-    // TEST-ONLY: subset of all users and songs
-    val (usedSongsSeq, usedUsersSeq) = (songs slice(0,500), users slice(0,500))
-    val (usedSongsPar, usedUsersPar) = (songs.par slice(0,500), users.par slice(0,500))
+    // TEST-ONLY: number of (maximum) users and songs to consider
+    val nUsedUsers = 400
+    val nUsedSongs = 400
+    // TEST-ONLY: using a subset of users and songs
+    val (usedSongs : IterableOnce[String], usedUsers : IterableOnce[String]) = {
+      if (execution == 0) (songs slice(0,nUsedUsers), users slice(0,nUsedSongs))
+      else if (execution == 1) (songs.par slice(0,nUsedUsers), users.par slice(0,nUsedSongs))
+      else println("\n! Error !\n")
+    }
 
     // given a user, it returns a list of all the songs (s)he listened to
     def songsFilteredByUser(user:String): List[String] = (for {
@@ -28,19 +36,23 @@ object main {
       case Array(_, song, _) => song
     }) distinct
 
-    // create a map user1->[song1, song2, ...], user2->[song3,...]
-    val usersToSongsMap = users map (user => (user -> songsFilteredByUser(user))) toMap
+    // create a map user1->[song1, song2, ..., songN], user2->[song1, song2, ..., songN]
+    val usersToSongsMap = users map (user => user -> songsFilteredByUser(user)) toMap
 
-    val sequentialRecommender = new MusicRecommender(usedUsersSeq, usedSongsSeq, usersToSongsMap)
-    val parallelRecommender = new MusicRecommender(usedUsersPar, usedSongsPar, usersToSongsMap)
+    val musicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap)
 
-    println("Starting sequential evaluation")
-    sequentialRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
-    sequentialRecommender.getUserBasedModelRank("models/userBasedModel.txt")
-    sequentialRecommender.getLinearCombinationModelRank(0.5, false, "models/linearCombination.txt")
-    println("\nStarting parallel evaluation")
-    parallelRecommender.getItemBasedModelRank("models/itemBasedModelP.txt")
-    parallelRecommender.getUserBasedModelRank("models/userBasedModelP.txt")
-    parallelRecommender.getLinearCombinationModelRank(0.5, true,"models/linearCombinationP.txt")
+    if (execution == 0) {
+      println("Starting sequential evaluation")
+      musicRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
+      musicRecommender.getUserBasedModelRank("models/userBasedModel.txt")
+      musicRecommender.getLinearCombinationModelRank(0.5, parallel = false, "models/linearCombination.txt")
+    }
+    else if (execution == 1) {
+      println("\nStarting parallel evaluation")
+      musicRecommender.getItemBasedModelRank("models/itemBasedModelP.txt")
+      musicRecommender.getUserBasedModelRank("models/userBasedModelP.txt")
+      musicRecommender.getLinearCombinationModelRank(0.5, parallel=true,"models/linearCombinationP.txt")
+    }
+    else println("\n! Error !\n")
   }
 }
