@@ -20,12 +20,12 @@ object main {
     // TEST-ONLY: print number of total users and songs in the file (as we may work on smaller files)
     println(s"Songs number:\t${songs.length}\nUsers number:\t${users.length}")
     // TEST-ONLY: number of (maximum) users and songs to consider
-    val nUsedUsers = 400
-    val nUsedSongs = 400
+    val nUsedUsers = 300
+    val nUsedSongs = 300
     // TEST-ONLY: using a subset of users and songs
-    val (usedSongs : IterableOnce[String], usedUsers : IterableOnce[String]) = {
-      if (execution == 0) (songs slice(0,nUsedUsers), users slice(0,nUsedSongs))
-      else if (execution == 1) (songs.par slice(0,nUsedUsers), users.par slice(0,nUsedSongs))
+    val (usedUsers : IterableOnce[String], usedSongs : IterableOnce[String]) = {
+      if (execution == 0) (users slice(0,nUsedUsers), songs slice(0,nUsedSongs))
+      else if (execution == 1) (users.par slice(0,nUsedUsers), songs.par slice(0,nUsedSongs))
       else println("\n! Error !\n")
     }
 
@@ -43,15 +43,15 @@ object main {
 
     if (execution == 0) {
       println("Starting sequential evaluation")
-      musicRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
-      musicRecommender.getUserBasedModelRank("models/userBasedModel.txt")
-      musicRecommender.getLinearCombinationModelRank(0.5, parallel = false, "models/linearCombination.txt")
+      //musicRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
+      musicRecommender.getUserBasedModelRank("models/userBasedModel.txt", parallel = false)
+      //musicRecommender.getLinearCombinationModelRank(0.5, parallel = false, "models/linearCombination.txt")
     }
     else if (execution == 1) {
       println("\nStarting parallel evaluation")
-      musicRecommender.getItemBasedModelRank("models/itemBasedModelP.txt")
-      musicRecommender.getUserBasedModelRank("models/userBasedModelP.txt")
-      musicRecommender.getLinearCombinationModelRank(0.5, parallel=true,"models/linearCombinationP.txt")
+      //musicRecommender.getItemBasedModelRank("models/itemBasedModelP.txt")
+      musicRecommender.getUserBasedModelRank("models/userBasedModelP.txt", parallel = true)
+      //musicRecommender.getLinearCombinationModelRank(0.5, parallel=true,"models/linearCombinationP.txt")
     }
     else println("\n! Error !\n")
   }

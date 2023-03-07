@@ -1,20 +1,20 @@
 package music_recommandation
 
-import java.io.{BufferedWriter, File, FileWriter}
-import scala.io.{BufferedSource, Source}
+import java.io._
+import scala.io._
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.collection.parallel.CollectionConverters._
 
-class MusicRecommender(private val usedUsers: IterableOnce[String], private val usedSongs: IterableOnce[String], private val usersToSongsMap: Map[String, List[String]] ) {
-  private def formula(specificFormula: (String, String) => Double): IterableOnce[(String, String, Double)] = {
+class MusicRecommender(private val users: IterableOnce[String], private val songs: IterableOnce[String], private val usersToSongsMap: Map[String, List[String]] ) {
+
+  private def formula(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
     for {
-      u <- usedUsers
-      s <- usedSongs //filter(song => !usersToSongsMap(u).contains(song))
-      if !usersToSongsMap(u).contains(s)
+      u <- users
+      s <- songs
+      //if !usersToSongsMap(u).contains(s) // Why?
     } yield {
-      def rank: Double = specificFormula(u,s)
-      (u, s, rank)
+      u -> (s, rank(u, s))
     }
   }
 
@@ -31,21 +31,23 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     result
   }
 
-  def getItemBasedModelRank(outputFileName: String = ""): Unit = {
+  private def foldTuples(usersTuples:Iterator[(Int, Int, Int)]): (Int, Int, Int) = {
+    usersTuples.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+  }
+
+  def getItemBasedModelRank(outputFileName: String = "") = {
     // if the user listened to both songs return 1, else 0
     def numerator(song1: String, song2: String, user: String): Int =
       if (usersToSongsMap(user).contains(song1) && usersToSongsMap(user).contains(song2)) 1 else 0
 
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
-      val usersTuples = usedUsers.iterator.map(user => (numerator(song1, song2, user),
+      val usersTuples = users.iterator.map(user => (numerator(song1, song2, user),
         if (usersToSongsMap(user).contains(song1)) 1 else 0,
         if (usersToSongsMap(user).contains(song2)) 1 else 0
       ))
 
-      val u = usersTuples.fold((0, 0, 0)) {
-        (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)
-      }
+      val u = foldTuples(usersTuples)
 
       val denominator = sqrt(u._2) * sqrt(u._3)
       if (denominator != 0) u._1 / denominator else 0
@@ -53,60 +55,61 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
 
     def specificFormula(user: String, song: String): Double = {
       for {
-        s2 <- usedSongs //filter (s => s != song) //filter deprecated
+        s2 <- songs //filter (s => s != song) //filter deprecated
         if s2 != song
         if usersToSongsMap(user).contains(s2)
       } yield { cosineSimilarity(song, s2) }
     } sum
 
     val itemBasedModel = time(formula(specificFormula), "item-based model")
-    if(outputFileName != "") time(writeModelOnFile(itemBasedModel, outputFileName), "writing")
+    print(itemBasedModel)
+    //if(outputFileName != "") time(writeModelOnFile(itemBasedModel, outputFileName), "writing")
   }
 
-  def getUserBasedModelRank(outputFileName: String = ""): Unit = {
+  def getUserBasedModelRank(outputFileName: String = "", parallel: Boolean = false): Unit = {
     // if both user listened to the same song return 1, else 0
     def numerator(user1:String, user2: String, song:String): Int =
       if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song)) 1 else 0
 
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
-      val usersTuples = usedSongs.iterator.map(song => (numerator(user1, user2, song),
+      val usersTuples = songs.iterator.map(song => (numerator(user1, user2, song),
         if (usersToSongsMap(user1).contains(song)) 1 else 0,
         if (usersToSongsMap(user2).contains(song)) 1 else 0,
       ))
-      val u = usersTuples.fold((0, 0, 0)) {
-        (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)
-      }
-
+      val u = foldTuples(usersTuples)
       val denominator = sqrt(u._2) * sqrt(u._3)
       if (denominator != 0) u._1 / denominator else 0
     }
 
     def specificFormula(user: String, song: String): Double = {
       for {
-        u2 <- usedUsers //filter (u => u != user)   // filter deprecated
+        u2 <- users //filter (u => u != user)   // filter deprecated
         if u2 != user
         if usersToSongsMap(u2).contains(song)
       } yield { cosineSimilarity(user, u2) }
     } sum
 
-    val userBasedModel = time(formula(specificFormula), "user-based model")
-    if(outputFileName != "") time(writeModelOnFile(userBasedModel, outputFileName), "writing")
+    val userBasedModel = if (parallel) {
+      time(formula(specificFormula).iterator.toMap.par, "user-based model")
+    } else {
+      time(formula(specificFormula).iterator.toMap, "user-based model")
+    }
+    if(outputFileName != "") time(writeModelOnFile(userBasedModel.iterator.toMap, outputFileName), "writing")
+  }
+
+  private def importModel(pathToModel: String): List[(String, String, Double)] = {
+    def modelFile: BufferedSource = Source.fromResource(pathToModel)
+    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.IeeeOrdering.reverse)
+    val model = modelFile.getLines().toList map (line => line split "\t" match {
+      case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
+    }) sorted ordering
+    model
   }
 
   def getLinearCombinationModelRank(alpha: Double, parallel: Boolean = false, outputFileName: String = ""): Unit = {
-    def userModelBasedFile: BufferedSource = Source.fromResource("models/userBasedModel.txt")
-    def itemModelBasedFile: BufferedSource = Source.fromResource("models/itemBasedModel.txt")
-
-    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.IeeeOrdering.reverse)
-    val ubm = userModelBasedFile.getLines().toList map (line => line split "\t" match {
-      case Array(users,songs,ranks)=>(users,songs,ranks.toDouble)
-    }) sorted ordering
-
-    val ibm = itemModelBasedFile.getLines().toList map (line => line split "\t" match {
-      case Array(users,songs,ranks)=>(users,songs,ranks.toDouble)
-    }) sorted ordering
-
+    val ubm = importModel("models/userBasedModel.txt")
+    val ibm = importModel("models/itemBasedModel.txt")
 
     def linearCombination(): Iterator[(String, String, Double)] = {
       // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
@@ -122,19 +125,14 @@ class MusicRecommender(private val usedUsers: IterableOnce[String], private val 
     }
 
     val linearCombined = time(linearCombination(), "linear combination model")
-    if(outputFileName != "") time(writeModelOnFile(linearCombined, outputFileName), "writing")
+    //if(outputFileName != "") time(writeModelOnFile(linearCombined, outputFileName), "writing")
   }
 
-  private def writeModelOnFile(model: IterableOnce[(String, String, Double)], outputFileName: String = ""): Unit = {
-    val f = new File(getClass.getClassLoader.getResource(outputFileName).getPath)
-    val bw = new BufferedWriter(new FileWriter(f))
-    model.iterator foreach (el => {
-    //model.iterator.toSeq groupBy(_._1) map (el => {
-    //model.iterator.toSeq sorted(Ordering.by[(String, String, Double), Double](_._3) reverse) groupBy(_._1) map (el => {
-      //el._2 map (row => {
-        bw.write(s"${el._1}\t${el._2}\t${el._3}\n")
-      //})
-    })
-    bw.close()
+   private def writeModelOnFile(model: Map[String, (String, Double)], outputFileName: String = ""): Unit = {
+    val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
+     model foreach (el => {
+       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
+     })
+    out.close()
   }
 }
