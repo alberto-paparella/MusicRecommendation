@@ -9,7 +9,7 @@ import scala.language._
 object main {
   def main(args: Array[String]): Unit = {
     // 0: sequential, 1: parallel, 2: distributed
-    val execution = 1
+    val execution = 0
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset

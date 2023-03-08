@@ -161,20 +161,24 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
   }
 
   def getLinearCombinationModel(alpha: Double): Unit = {
-    val ubm = importModel("models/userBasedModel.txt")
-    val ibm = importModel("models/itemBasedModel.txt")
-
     def linearCombination(): IterableOnce[(String, (String, Double))] = {
-      // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
       execution match {
-        case 0 => ubm.zip(ibm).map({
+        case 0 =>
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
+          // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).map({
           // for each pair
           case ((user1, song1, rank1), (user2, song2, rank2)) =>
             if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
             // return (user, song, ranks linear combination)
             (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
         })
-        case 1 => ubm.zip(ibm).par.map({
+        case 1 =>
+          val ubm = importModel("models/userBasedModelP.txt")
+          val ibm = importModel("models/itemBasedModelP.txt")
+          // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).par.map({
           // for each pair
           case ((user1, song1, rank1), (user2, song2, rank2)) =>
             if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
@@ -184,6 +188,8 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
         case 2 =>
           // TODO
           System.exit(1)
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
           ubm.zip(ibm).map({
             // for each pair
             case ((user1, song1, rank1), (user2, song2, rank2)) =>
@@ -193,6 +199,8 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
           })
         case _ =>
           System.exit(-1)
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
           ubm.zip(ibm).map({
             // for each pair
             case ((user1, song1, rank1), (user2, song2, rank2)) =>
