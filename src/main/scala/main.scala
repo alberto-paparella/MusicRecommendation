@@ -1,5 +1,7 @@
 import music_recommandation.MusicRecommender
+import my_utils.MyUtils.time
 
+import scala.collection.immutable._
 import scala.collection.parallel.CollectionConverters._
 import scala.io._
 import scala.language._
@@ -45,15 +47,14 @@ object main {
 
     // create a map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
     // making this structure an IterableOnce with parallelization in mind does not improve performances
-    val usersToSongsMap = usedUsers.iterator.toSeq.map (user => user -> songsFilteredByUser(user)) toMap
+    val usersToSongsMap = usedUsers.iterator.toSeq.map(user => user -> songsFilteredByUser(user)) toMap
 
     // instantiate musicRecommender
     val musicRecommender: MusicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, execution)
 
     // calculating user-based model
     musicRecommender.getUserBasedModel()
-
-    //musicRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
-    //musicRecommender.getLinearCombinationModelRank(0.5, parallel = false, "models/linearCombination.txt")
+    musicRecommender.getItemBasedModel()
+    musicRecommender.getLinearCombinationModel(0.5)
   }
 }
