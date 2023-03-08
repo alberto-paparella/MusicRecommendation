@@ -1,100 +1,194 @@
 package music_recommandation
 
+import my_utils.MyUtils
+
 import java.io._
+import scala.collection.parallel.CollectionConverters._
 import scala.io._
 import scala.language.postfixOps
 import scala.math.sqrt
-import scala.collection.parallel.CollectionConverters._
 
 class MusicRecommender(private val users: IterableOnce[String], private val songs: IterableOnce[String],
-                       private val usersToSongsMap: Map[String, List[String]], parallel: Boolean = false) {
-
-  private def formula(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
-    if (parallel) {
-      for {
-        u <- users.iterator.toSeq.par
-        s <- songs.iterator.toSeq.par
-        //if !usersToSongsMap(u).contains(s) // Why?
-      } yield {
-        u -> (s, rank(u, s))
-      }
-    } else {
-      {
+                       private val usersToSongsMap: IterableOnce[(String, List[String])], execution: Int = 0) {
+  private def getModel(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
+    execution match {
+      case 0 =>
         for {
-          u <- users //.iterator.toSeq.par
-          s <- songs //.iterator.toSeq.par
-          //if !usersToSongsMap(u).contains(s) // Why?
-        } yield {
-          u -> (s, rank(u, s))
-        }
-      }
+          u <- users.iterator.toSeq
+          s <- songs.iterator.toSeq
+          //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        } yield u -> (s, rank(u, s))
+      case 1 =>
+        for {
+          u <- users.iterator.toSeq.par
+          s <- songs.iterator.toSeq.par
+          //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        } yield u -> (s, rank(u, s))
+      case 2 =>
+      // TODO
+      System.exit(1)
+      for {
+      u <- users.iterator.toSeq
+      s <- songs.iterator.toSeq
+        //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+      } yield u -> (s, rank (u, s) )
+    case _ =>
+      System.exit(- 1)
+      for {
+      u <- users.iterator.toSeq
+      s <- songs.iterator.toSeq
+        //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+      } yield u -> (s, rank (u, s) )
     }
   }
 
-  private def time[R](block: => R, modelName: String): R = {
-    // get start time
-    val t0 = System.nanoTime()
-    // execute code
-    val result = block
-    // get end time
-    val t1 = System.nanoTime()
-    // print elapsed time
-    println(s"Elapsed time for $modelName:\t" + (t1 - t0)/1000000 + "ms")
-    // return the result
-    result
-  }
-
-  private def foldTuples(usersTuples:Iterator[(Int, Int, Int)]): (Int, Int, Int) = {
-    usersTuples.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
-  }
-
-  def getUserBasedModelRank(outputFileName: String = ""): Unit = {
-    // if both user listened to the same song return 1, else 0
-    def numerator(user1: String, user2: String, song: String): Int =
-      if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song)) 1 else 0
+  def getUserBasedModel(): Unit = {
+    // if both users listened to the same song return 1, else 0
+    def numerator(user1: String, user2: String, song: String): Int = {
+      execution match {
+        case 0 =>
+          if (usersToSongsMap.iterator.to(Map)(user1).contains(song) && usersToSongsMap.iterator.to(Map)(user2).contains(song) ) 1 else 0
+        case 1 =>
+          if (usersToSongsMap.iterator.to(Map).par(user1).contains(song) && usersToSongsMap.iterator.to(Map).par(user2).contains(song)) 1 else 0
+        case 2 =>
+          // TODO
+          System.exit(1)
+          if (usersToSongsMap.iterator.to(Map)(user1).contains(song) && usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+        case _ =>
+          System.exit(- 1)
+          if (usersToSongsMap.iterator.to(Map)(user1).contains(song) && usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+      }
+    }
 
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
-      val usersTuples = songs.iterator.map(song => (numerator(user1, user2, song),
-        if (usersToSongsMap(user1).contains(song)) 1 else 0,
-        if (usersToSongsMap(user2).contains(song)) 1 else 0,
-      ))
-      val u = foldTuples(usersTuples)
-      val denominator = sqrt(u._2) * sqrt(u._3)
-      if (denominator != 0) u._1 / denominator else 0
-    }
-
-    def specificFormula(user: String, song: String): Double = {
-      for {
-        u2 <- users //filter (u => u != user)   // filter deprecated
-        if u2 != user
-        if usersToSongsMap(u2).contains(song)
-      } yield {
-        cosineSimilarity(user, u2)
+      val usersTuples = execution match {
+        case 0 => songs.iterator.toSeq.map(
+          song => (numerator (user1, user2, song),
+          if (usersToSongsMap.iterator.to(Map)(user1).contains(song)) 1 else 0,
+          if (usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+          )
+        )
+        case 1 => songs.iterator.toSeq.par.map(
+          song => (numerator(user1, user2, song),
+            if (usersToSongsMap.iterator.to(Map)(user1).contains(song)) 1 else 0,
+            if (usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+          )
+        )
+        case 2 =>
+          // TODO
+          System.exit(1)
+          songs.iterator.toSeq.map(
+          song => (numerator(user1, user2, song),
+            if (usersToSongsMap.iterator.to(Map)(user1).contains(song)) 1 else 0,
+            if (usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+          )
+        )
+        case _ =>
+          System.exit(-1)
+          songs.iterator.toSeq.map(
+          song => (numerator(user1, user2, song),
+            if (usersToSongsMap.iterator.to(Map)(user1).contains(song)) 1 else 0,
+            if (usersToSongsMap.iterator.to(Map)(user2).contains(song)) 1 else 0
+          )
+        )
       }
-    } sum
 
-    val userBasedModel = if (parallel) {
-      time(formula(specificFormula).iterator.toMap.par, "user-based model")
-    } else {
-      time(formula(specificFormula).iterator.toMap, "user-based model")
+      val u = execution match {
+        case 0 => usersTuples.iterator.toSeq.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+        case 1 => usersTuples.iterator.toSeq.par.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+        case 2 =>
+          // TODO
+          System.exit(1)
+          usersTuples.iterator.toSeq.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+        case _ =>
+          System.exit(-1)
+          usersTuples.iterator.toSeq.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+      }
+
+      val denominator = sqrt(u._2) * sqrt(u._3)
+      if (denominator != 0) u._1 / denominator else 0.0
     }
-    if (outputFileName != "") time(writeModelOnFile(userBasedModel.iterator.toMap, outputFileName), "writing")
+
+    def rank(user: String, song: String): Double = {
+      execution match {
+        case 0 =>
+          for {
+            u2 <- users.iterator.toSeq
+            if u2 != user
+            if usersToSongsMap.iterator.to(Map)(u2).contains(song)
+          } yield {
+            cosineSimilarity(user, u2)
+          }
+        case 1 =>
+          for {
+            u2 <- users.iterator.toSeq.par
+            if u2 != user
+            if usersToSongsMap.iterator.to(Map).par(u2).contains(song)
+          } yield {
+            cosineSimilarity(user, u2)
+          }
+        case 2 =>
+          // TODO
+          System.exit(1)
+          for {
+            u2 <- users.iterator.toSeq
+            if u2 != user
+            if usersToSongsMap.iterator.to(Map)(u2).contains(song)
+          } yield {
+            cosineSimilarity(user, u2)
+          }
+        case _ =>
+          System.exit(-1)
+          for {
+            u2 <- users.iterator.toSeq
+            if u2 != user
+            if usersToSongsMap.iterator.to(Map)(u2).contains(song)
+          } yield {
+            cosineSimilarity(user, u2)
+          }
+      }
+    }.iterator.sum
+
+    val userBasedModel = execution match {
+      case 0 =>
+        MyUtils.time(getModel(rank).iterator.toMap, "(Sequential) user-based model")
+      case 1 => MyUtils.time(getModel(rank).iterator.toMap.par, "(Parallel) user-based model")
+      case 2 =>
+        // TODO
+        System.exit(1)
+        MyUtils.time(getModel(rank).iterator.toMap.par, "(Distributed) user-based model")
+      case _ =>
+        System.exit(-1)
+        MyUtils.time(getModel(rank).iterator.toMap.par, "(Exiting) user-based model")
+    }
+
+    execution match {
+      case 0 => MyUtils.time(writeModelOnFile(userBasedModel.iterator.toMap, "models/userBasedModel.txt"), "writing")
+      case 1 => MyUtils.time(writeModelOnFile(userBasedModel.iterator.toMap.par, "models/userBasedModelP.txt"), "writing")
+      case 2 =>
+        // TODO
+        System.exit(1)
+        MyUtils.time(writeModelOnFile(userBasedModel.iterator.toMap, "models/userBasedModelD.txt"), "writing")
+      case _ =>
+        System.exit(-1)
+        MyUtils.time(writeModelOnFile(userBasedModel.iterator.toMap, ""), "")
+    }
   }
 
-  def getItemBasedModelRank(outputFileName: String = "") = {
+  def getItemBasedModelRank() = {
     // if the user listened to both songs return 1, else 0
     def numerator(song1: String, song2: String, user: String): Int =
-      if (usersToSongsMap(user).contains(song1) && usersToSongsMap(user).contains(song2)) 1 else 0
+      if (usersToSongsMap.iterator.to(Map)(user).contains(song1) && usersToSongsMap.iterator.to(Map)(user).contains(song2)) 1 else 0
 
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
       val usersTuples = users.iterator.map(user => (numerator(song1, song2, user),
-        if (usersToSongsMap(user).contains(song1)) 1 else 0,
-        if (usersToSongsMap(user).contains(song2)) 1 else 0
+        if (usersToSongsMap.iterator.to(Map)(user).contains(song1)) 1 else 0,
+        if (usersToSongsMap.iterator.to(Map)(user).contains(song2)) 1 else 0
       ))
 
-      val u = foldTuples(usersTuples)
+      val u = usersTuples.iterator.toSeq.fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
 
       val denominator = sqrt(u._2) * sqrt(u._3)
       if (denominator != 0) u._1 / denominator else 0
@@ -104,11 +198,11 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
       for {
         s2 <- songs //filter (s => s != song) //filter deprecated
         if s2 != song
-        if usersToSongsMap(user).contains(s2)
+        if usersToSongsMap.iterator.to(Map)(user).contains(s2)
       } yield { cosineSimilarity(song, s2) }
     } sum
 
-    val itemBasedModel = time(formula(specificFormula), "item-based model")
+    val itemBasedModel = MyUtils.time(getModel(specificFormula), "item-based model")
     print(itemBasedModel)
     //if(outputFileName != "") time(writeModelOnFile(itemBasedModel, outputFileName), "writing")
   }
@@ -139,15 +233,33 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
       })
     }
 
-    val linearCombined = time(linearCombination(), "linear combination model")
+    val linearCombined = MyUtils.time(linearCombination(), "linear combination model")
     //if(outputFileName != "") time(writeModelOnFile(linearCombined, outputFileName), "writing")
   }
 
-   private def writeModelOnFile(model: Map[String, (String, Double)], outputFileName: String = ""): Unit = {
+   private def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
-     model foreach (el => {
-       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
-     })
+    execution match {
+      case 0 =>
+        model.iterator.toMap foreach (el => {
+          out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
+        })
+      case 1 =>
+        model.iterator.toMap.par foreach (el => {
+          out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
+        })
+      case 2 =>
+        // TODO
+        System.exit(1)
+        model.iterator.toMap foreach (el => {
+          out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
+        })
+      case _ =>
+        System.exit(-1)
+        model.iterator.toMap foreach (el => {
+          out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
+        })
+    }
     out.close()
   }
 }
