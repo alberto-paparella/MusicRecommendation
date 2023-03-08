@@ -39,18 +39,22 @@ object main {
     // create a map user1->[song1, song2, ..., songN], user2->[song1, song2, ..., songN]
     val usersToSongsMap = users map (user => user -> songsFilteredByUser(user)) toMap
 
-    val musicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap)
+    val musicRecommender = {
+      if (execution == 0) new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, parallel = false)
+      else if (execution == 1) new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, parallel = true)
+      else new MusicRecommender(usedUsers, usedSongs, usersToSongsMap)
+    }
 
     if (execution == 0) {
       println("Starting sequential evaluation")
       //musicRecommender.getItemBasedModelRank("models/itemBasedModel.txt")
-      musicRecommender.getUserBasedModelRank("models/userBasedModel.txt", parallel = false)
+      musicRecommender.getUserBasedModelRank("models/userBasedModel.txt")
       //musicRecommender.getLinearCombinationModelRank(0.5, parallel = false, "models/linearCombination.txt")
     }
     else if (execution == 1) {
       println("\nStarting parallel evaluation")
       //musicRecommender.getItemBasedModelRank("models/itemBasedModelP.txt")
-      musicRecommender.getUserBasedModelRank("models/userBasedModelP.txt", parallel = true)
+      musicRecommender.getUserBasedModelRank("models/userBasedModelP.txt")
       //musicRecommender.getLinearCombinationModelRank(0.5, parallel=true,"models/linearCombinationP.txt")
     }
     else println("\n! Error !\n")
