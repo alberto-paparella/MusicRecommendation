@@ -1,6 +1,5 @@
 import music_recommandation.MusicRecommender
 
-import scala.collection.IterableOnce.iterableOnceExtensionMethods
 import scala.collection.parallel.CollectionConverters._
 import scala.io._
 import scala.language._
@@ -28,7 +27,7 @@ object main {
     if (verbose) println(s"File \'$fileName\' contains ${users.length} users and ${songs.length} songs")
 
     // TEST-ONLY: using a subset of users and songs
-    val (usedUsers : IterableOnce[String], usedSongs : IterableOnce[String]) = {
+    val (usedUsers: IterableOnce[String], usedSongs: IterableOnce[String]) = {
       if (execution == 0) (users slice(0, nUsedUsers), songs slice(0, nUsedSongs))
       else if (execution == 1) (users.par slice(0, nUsedUsers), songs.par slice(0, nUsedSongs))
       else if (execution == 2) {if (verbose) println("\n! Todo !\n"); System.exit(1)}
@@ -45,12 +44,8 @@ object main {
     }) distinct
 
     // create a map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
-    val (usersToSongsMap : IterableOnce[(String, List[String])]) = {
-      if (execution == 0) usedUsers.iterator.toSeq.map (user => user -> songsFilteredByUser(user))
-      else if (execution == 1) usedUsers.iterator.toSeq.par.map (user => user -> songsFilteredByUser(user))
-      else if (execution == 2) {if (verbose) println("\n! Todo !\n"); System.exit(2); usedUsers.iterator.toSeq.map (user => user -> songsFilteredByUser(user))}
-      else {if (verbose) println("\n! Error !\n"); System.exit(-1); usedUsers.iterator.toSeq.map (user => user -> songsFilteredByUser(user))}
-    }
+    // making this structure an IterableOnce with parallelization in mind does not improve performances
+    val usersToSongsMap = usedUsers.iterator.toSeq.map (user => user -> songsFilteredByUser(user)) toMap
 
     // instantiate musicRecommender
     val musicRecommender: MusicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, execution)
