@@ -9,14 +9,14 @@ import scala.language._
 object main {
   def main(args: Array[String]): Unit = {
     // 0: sequential, 1: parallel, 2: distributed
-    val execution = 0
+    val execution = 1
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset
     val fileName: String = "train_triplets_50k.txt"
     // number of (maximum) users and songs to consider
-    val nUsedUsers = 100
-    val nUsedSongs = 100
+    val nUsedUsers = 500
+    val nUsedSongs = 500
 
     // import dataset
     def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
@@ -56,5 +56,7 @@ object main {
     musicRecommender.getUserBasedModel()
     musicRecommender.getItemBasedModel()
     musicRecommender.getLinearCombinationModel(0.5)
+    musicRecommender.getAggregationModel(0.5)
+    musicRecommender.getStochasticCombinationModel(0.5)
   }
 }

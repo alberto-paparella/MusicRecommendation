@@ -7,6 +7,7 @@ import scala.collection.parallel.CollectionConverters._
 import scala.io._
 import scala.language.postfixOps
 import scala.math.sqrt
+import scala.util.Random
 
 class MusicRecommender(private val users: IterableOnce[String], private val songs: IterableOnce[String],
                        private val usersToSongsMap: Map[String, List[String]], execution: Int = 0) {
@@ -94,7 +95,6 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
         writeModelOnFile(userBasedModel, "models/userBasedModelD.txt")
       case _ =>
         System.exit(-1)
-        writeModelOnFile(userBasedModel)
     }
   }
 
@@ -147,7 +147,6 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
         writeModelOnFile(itemBasedModel, "models/itemBasedModelD.txt")
       case _ =>
         System.exit(-1)
-        writeModelOnFile(itemBasedModel)
     }
   }
 
@@ -223,7 +222,187 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
         writeModelOnFile(linearCombinationModel, "models/linearCombinationModelD.txt")
       case _ =>
         System.exit(-1)
-        writeModelOnFile(linearCombinationModel)
+    }
+  }
+
+  def getAggregationModel(itemBasedPercentage: Double = 0.5): Unit ={
+
+    // Exit if percentage is not in the range 0 <= p <= 1
+    if(itemBasedPercentage < 0 || itemBasedPercentage > 1) {
+      System.err.println("Percentage must be between 0 and 1\n");
+      System.exit(-1);
+    }
+
+    def aggregation(): IterableOnce[(String, (String, Double))] = {
+      execution match {
+        case 0 =>
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
+          val length = ubm.length
+          val itemBasedThreshold = (itemBasedPercentage*length).toInt
+          // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+          // TODO: find a better solution than zipWithIndex (may be a slow solution)
+          ubm.zip(ibm).zipWithIndex.map({
+            // for each pair
+            case (couple, index) => couple match {
+              case ((user1, song1, rank1), (user2, song2, rank2)) =>
+                if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+                // based on the percentage, take the rank of one model
+                if(index < itemBasedThreshold) (user1, (song1, rank2))
+                else (user1, (song1, rank1))
+            }
+          })
+        case 1 =>
+          val ubm = importModel("models/userBasedModelP.txt")
+          val ibm = importModel("models/itemBasedModelP.txt")
+          val length = ubm.length
+          val itemBasedThreshold = (itemBasedPercentage*length).toInt
+          // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+          // TODO: find a better solution than zipWithIndex (may be a slow solution)
+          ubm.zip(ibm).zipWithIndex.par.map({
+            // for each pair
+            case (couple, index) => couple match {
+              case ((user1, song1, rank1), (user2, song2, rank2)) =>
+                if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+                // based on the percentage, take the rank of one model
+                if(index < itemBasedThreshold) (user1, (song1, rank2))
+                else (user1, (song1, rank1));
+            }
+          })
+        case 2 =>
+          // TODO
+          System.exit(1)
+          val ubm = importModel("models/userBasedModelD.txt")
+          val ibm = importModel("models/itemBasedModelD.txt")
+          val length = ubm.length
+          val itemBasedThreshold = (itemBasedPercentage*length).toInt
+          // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+          // TODO: find a better solution than zipWithIndex (may be a slow solution)
+          ubm.zip(ibm).zipWithIndex.map({
+            // for each pair
+            case (couple, index) => couple match {
+              case ((user1, song1, rank1), (user2, song2, rank2)) =>
+                if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+                // based on the percentage, take the rank of one model
+                if(index < itemBasedThreshold) (user1, (song1, rank2))
+                else (user1, (song1, rank1));
+            }
+          })
+        case _ =>
+          System.exit(-1)
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
+          val length = ubm.length
+          val itemBasedThreshold = (itemBasedPercentage*length).toInt
+          // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+          ubm.zip(ibm).zipWithIndex.map({
+            // for each pair
+            case (couple, index) => couple match {
+              case ((user1, song1, rank1), (user2, song2, rank2)) =>
+                if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+                // based on the percentage, take the rank of one model
+                if(index < itemBasedThreshold) (user1, (song1, rank2))
+                else (user1, (song1, rank1));
+            }
+          })
+      }
+    }
+
+    val aggregationModel = MyUtils.time(aggregation(), "aggregation model")
+
+    // Save model to file
+    execution match {
+      case 0 => writeModelOnFile(aggregationModel, "models/aggregationModel.txt")
+      case 1 => writeModelOnFile(aggregationModel, "models/aggregationModelP.txt")
+      case 2 =>
+        // TODO
+        System.exit(1)
+        writeModelOnFile(aggregationModel, "models/aggregationModelD.txt")
+      case _ =>
+        System.exit(-1)
+    }
+  }
+
+  def getStochasticCombinationModel(itemBasedProbability: Double = 0.5): Unit = {
+
+    // Exit if percentage is not in the range 0 <= p <= 1
+    if(itemBasedProbability < 0 || itemBasedProbability > 1) {
+      System.err.println("Probability must be between 0 and 1\n");
+      System.exit(-1);
+    }
+
+    def stochasticCombination(): IterableOnce[(String, (String, Double))] = {
+      execution match {
+        case 0 =>
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
+          val random = new Random
+          // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).map({
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+              // based on the probability, take the rank of one model
+              if(random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+              else (user1, (song1, rank1))
+          })
+        case 1 =>
+          val ubm = importModel("models/userBasedModelP.txt")
+          val ibm = importModel("models/itemBasedModelP.txt")
+          val random = new Random
+          // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).map({
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+              // based on the probability, take the rank of one model
+              if(random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+              else (user1, (song1, rank1))
+          })
+        case 2 =>
+          // TODO
+          System.exit(1)
+          val ubm = importModel("models/userBasedModelD.txt")
+          val ibm = importModel("models/itemBasedModelD.txt")
+          val random = new Random
+          // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).map({
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+              // based on the probability, take the rank of one model
+              if(random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+              else (user1, (song1, rank1))
+          })
+        case _ =>
+          System.exit(-1)
+          val ubm = importModel("models/userBasedModel.txt")
+          val ibm = importModel("models/itemBasedModel.txt")
+          val random = new Random
+          // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+          ubm.zip(ibm).map({
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+              // based on the probability, take the rank of one model
+              if(random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+              else (user1, (song1, rank1))
+          })
+      }
+    }
+
+    val stochasticCombinationModel = MyUtils.time(stochasticCombination(), "stochastic combination model")
+
+    // Save model to file
+    execution match {
+      case 0 => writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
+      case 1 => writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModelP.txt")
+      case 2 =>
+        // TODO
+        System.exit(1)
+        writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModelD.txt")
+      case _ =>
+        System.exit(-1)
     }
   }
 
