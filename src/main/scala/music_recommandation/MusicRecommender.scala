@@ -406,10 +406,10 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
     }
   }
 
-   private def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
+  private def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
-    model.iterator.toMap foreach (el => {
+    model.iterator foreach (el => {
       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
     })
     out.close()
