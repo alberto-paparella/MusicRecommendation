@@ -9,7 +9,7 @@ object MyUtils {
     // get end time
     val t1 = System.nanoTime()
     // print elapsed time
-    println(s"Elapsed time for $operation:\t" + (t1 - t0) / 1000000 + "ms")
+    println(s"Elapsed time for $operation:\t" + (t1 - t0) / 1000000 + "ms (" + (t1 - t0) + "ns)")
     // return the result
     result
   }
