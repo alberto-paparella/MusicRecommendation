@@ -64,13 +64,6 @@ object main {
     // print number of users and songs that are actually being used
     if (verbose) println(s"Using ${usedUsers.iterator.length} users and ${usedSongs.iterator.length} songs")
 
-    // given a user, it returns a list of all the songs (s)he listened to
-    def songsFilteredByUser(user: String): List[String] = (for {
-      line <- in.getLines().toList.filter(line => line.contains(user))
-    } yield line split "\t" match {
-      case Array(_, song, _) => song
-    }) distinct
-
     // instantiate musicRecommender
     val musicRecommender: MusicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, execution)
 
