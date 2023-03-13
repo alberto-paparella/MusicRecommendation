@@ -9,14 +9,11 @@ import scala.language._
 object main {
   def main(args: Array[String]): Unit = {
     // 0: sequential, 1: parallel, 2: distributed
-    val execution = 0
+    val execution = 1
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset
-    val fileName: String = "train_triplets_50k.txt"
-    // number of (maximum) users and songs to consider
-    val nUsedUsers = 100
-    val nUsedSongs = 100
+    val fileName: String = "train_triplets_2k.txt"
 
     // import dataset
     def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
@@ -54,24 +51,14 @@ object main {
     // print number of total users and songs in the file
     if (verbose) println(s"File \'$fileName\' contains ${users.length} users and ${songs.length} songs")
 
-    // TEST-ONLY: using a subset of users and songs
-    val (usedUsers: IterableOnce[String], usedSongs: IterableOnce[String]) = {
-      if (execution == 0) (users slice(0, nUsedUsers), songs slice(0, nUsedSongs))
-      else if (execution == 1) (users.par slice(0, nUsedUsers), songs.par slice(0, nUsedSongs))
-      else if (execution == 2) {if (verbose) println("\n! Todo !\n"); System.exit(1)}
-      else {if (verbose) println("\n! Error !\n"); System.exit(-1)}
-    }
-    // print number of users and songs that are actually being used
-    if (verbose) println(s"Using ${usedUsers.iterator.length} users and ${usedSongs.iterator.length} songs")
-
     // instantiate musicRecommender
-    val musicRecommender: MusicRecommender = new MusicRecommender(usedUsers, usedSongs, usersToSongsMap, execution)
+    val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, usersToSongsMap, execution)
 
     // calculating user-based model
     musicRecommender.getUserBasedModel()
-    musicRecommender.getItemBasedModel()
-    musicRecommender.getLinearCombinationModel(0.5)
-    musicRecommender.getAggregationModel(0.5)
-    musicRecommender.getStochasticCombinationModel(0.5)
+    //musicRecommender.getItemBasedModel()
+    //musicRecommender.getLinearCombinationModel(0.5)
+    //musicRecommender.getAggregationModel(0.5)
+    //musicRecommender.getStochasticCombinationModel(0.5)
   }
 }

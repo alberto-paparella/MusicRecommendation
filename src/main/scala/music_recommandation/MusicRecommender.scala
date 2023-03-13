@@ -48,17 +48,21 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
       // Here, parallelization does not improve performances (TODO: check)
-      val temp = songs.iterator.toSeq.map(song => (
+      //val temp = songs.iterator.toSeq.map(song => (
+      val numerator = songs.iterator.toSeq.map(song => (
         // (numerator) if both users listened to song return 1, else 0
-        if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song) ) 1 else 0,
+        if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song) ) 1 else 0//,
         // (left sqrt arg) if user1 listened to song return 1, else 0
-        if (usersToSongsMap(user1).contains(song)) 1 else 0,
+        //if (usersToSongsMap(user1).contains(song)) 1 else 0,
         // (right sqrt arg) if user2 listened to song return 1, ese 0
-        if (usersToSongsMap(user2).contains(song)) 1 else 0
-      )).fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+        //if (usersToSongsMap(user2).contains(song)) 1 else 0
+      //)).fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+      )).fold(0) { (acc, tup) => (acc + tup) }
       // pre-calculate denominator to catch if it is equal to 0
-      val denominator = sqrt(temp._2) * sqrt(temp._3)
-      if (denominator != 0) temp._1 / denominator else 0.0
+      //val denominator = sqrt(temp._2) * sqrt(temp._3)
+      val denominator = sqrt(usersToSongsMap(user1).length) * sqrt(usersToSongsMap(user2).length)
+      //if (denominator != 0) temp._1 / denominator else 0.0
+      if (denominator != 0) numerator / denominator else 0.0
     }
 
     def rank(user: String, song: String): Double = {
