@@ -1,5 +1,4 @@
 import music_recommandation.MusicRecommender
-import my_utils.MyUtils.time
 
 import scala.collection.immutable._
 import scala.collection.parallel.CollectionConverters._
@@ -9,7 +8,7 @@ import scala.language._
 object main {
   def main(args: Array[String]): Unit = {
     // 0: sequential, 1: parallel, 2: distributed
-    val execution = 1
+    val execution = 0
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset
@@ -56,9 +55,9 @@ object main {
 
     // calculating user-based model
     musicRecommender.getUserBasedModel()
-    //musicRecommender.getItemBasedModel()
-    //musicRecommender.getLinearCombinationModel(0.5)
-    //musicRecommender.getAggregationModel(0.5)
-    //musicRecommender.getStochasticCombinationModel(0.5)
+    musicRecommender.getItemBasedModel()
+    musicRecommender.getLinearCombinationModel(0.5)
+    musicRecommender.getAggregationModel(0.5)
+    musicRecommender.getStochasticCombinationModel(0.5)
   }
 }
