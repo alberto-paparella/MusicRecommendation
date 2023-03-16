@@ -8,7 +8,7 @@ import scala.language._
 object main {
   def main(args: Array[String]): Unit = {
     // 0: sequential, 1: parallel, 2: distributed
-    val execution = 0
+    val execution = 1
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset
@@ -17,13 +17,19 @@ object main {
     // import dataset
     def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
 
-    def songsByUser(): (List[String], List[String], Map[String, List[String]]) = {
-      // map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
-      val songsUsersMap = collection.mutable.Map[String, List[String]]()
+    /*
+     * We could have used a single map, but having both can be useful for some tricks later on
+     * Between space and temporal efficiency, we chose the latter
+     */
+    def songsByUser(): (List[String], List[String], Map[String, List[String]], Map[String, List[String]]) = {
       // all users in file
       val usersInFile = collection.mutable.Set[String]()
       // all songs in file
       val songsInFile = collection.mutable.Set[String]()
+      // map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
+      val songsUsersMap = collection.mutable.Map[String, List[String]]()
+      // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
+      val usersSongsMap = collection.mutable.Map[String, List[String]]()
       // for each split line on "\t"
       for {
         line <- in.getLines().toList
@@ -39,25 +45,31 @@ object main {
             // else add song to a new list related to the user
             case None => Some(List(s))
           }
+          usersSongsMap.updateWith(s) {
+            // if song is already in the map, add user to the list of users who listened to the song
+            case Some(list: List[String]) => Some(list :+ u)
+            // else add song to a new list related to the user
+            case None => Some(List(u))
+          }
         }
       }
-      (usersInFile.toList , songsInFile.toList , songsUsersMap.toMap)
+      (usersInFile.toList , songsInFile.toList , songsUsersMap.toMap, usersSongsMap.toMap)
     }
 
     // get data from file
-    val (users, songs, usersToSongsMap) = songsByUser()
+    val (users, songs, usersToSongsMap, songsToUsersMap) = songsByUser()
 
     // print number of total users and songs in the file
     if (verbose) println(s"File \'$fileName\' contains ${users.length} users and ${songs.length} songs")
 
     // instantiate musicRecommender
-    val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, usersToSongsMap, execution)
+    val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, usersToSongsMap, songsToUsersMap, execution)
 
     // calculating user-based model
-    musicRecommender.getUserBasedModel()
+    //musicRecommender.getUserBasedModel()
     musicRecommender.getItemBasedModel()
-    musicRecommender.getLinearCombinationModel(0.5)
-    musicRecommender.getAggregationModel(0.5)
-    musicRecommender.getStochasticCombinationModel(0.5)
+    //musicRecommender.getLinearCombinationModel(0.5)
+    //musicRecommender.getAggregationModel(0.5)
+    //musicRecommender.getStochasticCombinationModel(0.5)
   }
 }

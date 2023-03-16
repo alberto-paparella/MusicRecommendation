@@ -10,7 +10,8 @@ import scala.math.sqrt
 import scala.util.Random
 
 class MusicRecommender(private val users: IterableOnce[String], private val songs: IterableOnce[String],
-                       private val usersToSongsMap: Map[String, List[String]], execution: Int = 0) {
+                       private val usersToSongsMap: Map[String, List[String]],
+                       private val songsToUsersMap: Map[String, List[String]], execution: Int = 0) {
   private def getModel(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
     // Main parallelization happens here
     execution match {
@@ -27,20 +28,20 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
           //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
         } yield u -> (s, rank(u, s))
       case 2 =>
-      // TODO
-      System.exit(1)
-      for {
-      u <- users
-      s <- songs
-        //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
-      } yield u -> (s, rank (u, s) )
-    case _ =>
-      System.exit(- 1)
-      for {
-      u <- users
-      s <- songs
-        //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
-      } yield u -> (s, rank (u, s) )
+        // TODO
+        System.exit(1)
+        for {
+          u <- users
+          s <- songs
+          //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        } yield u -> (s, rank (u, s) )
+      case _ =>
+        System.exit(- 1)
+        for {
+          u <- users
+          s <- songs
+          //if !usersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        } yield u -> (s, rank (u, s) )
     }
   }
 
@@ -98,17 +99,13 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
       // Here, parallelization does not improve performances (TODO: check)
-      val temp = users.iterator.map(user => (
-        // (numerator) if the user listened to both songs return 1, else 0
-        if (usersToSongsMap(user).contains(song1) && usersToSongsMap(user).contains(song2)) 1 else 0,
-        // (left square argument) if the user listened to song1 return 1, else 0
-        if (usersToSongsMap(user).contains(song1)) 1 else 0,
-        // (right square argument) if the user listened to song2 return 1, else 0
-        if (usersToSongsMap(user).contains(song2)) 1 else 0
-      )).fold((0, 0, 0)) {(acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3)}
+      val numerator = users.iterator.map(user => (
+        // if the user listened to both songs return 1, else 0
+        if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0
+        ) ).fold(0) { (acc, tup) => acc + tup }
       // pre-calculate denominator to catch if it is equal to 0
-      val denominator = sqrt(temp._2) * sqrt(temp._3)
-      if (denominator != 0) temp._1 / denominator else 0
+      val denominator = sqrt(songsToUsersMap(song1).length) * sqrt(songsToUsersMap(song2).length)
+      if (denominator != 0) numerator / denominator else 0
     }
 
     def rank(user: String, song: String): Double = {
@@ -163,23 +160,23 @@ class MusicRecommender(private val users: IterableOnce[String], private val song
           val ibm = importModel("models/itemBasedModel.txt")
           // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
           ubm.zip(ibm).map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
-            // return (user, song, ranks linear combination)
-            (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
-        })
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2)  // Catch error during zip
+              // return (user, song, ranks linear combination)
+              (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
+          })
         case 1 =>
           val ubm = importModel("models/userBasedModelP.txt")
           val ibm = importModel("models/itemBasedModelP.txt")
           // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
           ubm.zip(ibm).par.map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-            // return (user, song, ranks linear combination)
-            (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
-        })
+            // for each pair
+            case ((user1, song1, rank1), (user2, song2, rank2)) =>
+              if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+              // return (user, song, ranks linear combination)
+              (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
+          })
         case 2 =>
           // TODO
           System.exit(1)
