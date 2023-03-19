@@ -4,3 +4,4 @@ project/*
 results/*
 src/main/resources/*.txt
 target/*
+DISTRIBUTED_OUTPUT/*

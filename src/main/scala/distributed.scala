@@ -4,6 +4,7 @@ import java.io.PrintWriter
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
+import scala.util.Random
 
 object distributed extends Serializable {
 
@@ -39,7 +40,7 @@ object distributed extends Serializable {
     model
   }
   def main(args: Array[String]): Unit = {
-    val fileName: String = "/home/gabbo/University/Magistrale/scpproject/MusicReccomendation/src/main/resources/train_triplets_2k.txt"
+    val fileName: String = "/home/gabbo/University/Magistrale/scpproject/MusicReccomendation/src/main/resources/train_triplets_5k.txt"
     def in: BufferedSource = Source.fromFile(fileName)
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     val ctx = new SparkContext(conf)
@@ -175,14 +176,52 @@ object distributed extends Serializable {
           // return (user, song, ranks linear combination)
           (user1 -> (song1, rank1 * lcAlpha + rank2 * (1 - lcAlpha)))
       }
-      // TODO: it does not save correctly
       lc.saveAsTextFile("DISTRIBUTED_OUTPUT/LCM")
       lc
     }, "(Distributed) linear combination")
 
+    val itemBasedPercentage = 0.5
+    val aModel = time({
+      val length = ubm.length
+      val itemBasedThreshold = (itemBasedPercentage * length).toInt
+      // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+      val modelsPair = ctx.parallelize(ubm.zip(ibm).zipWithIndex)
+      val am = modelsPair.map({
+        // for each pair
+        case (couple, index) => couple match {
+          case ((user1, song1, rank1), (user2, song2, rank2)) =>
+            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+            // based on the percentage, take the rank of one model
+            if (index < itemBasedThreshold) (user1, (song1, rank2))
+            else (user1, (song1, rank1))
+        }
+      })
+      am.saveAsTextFile("DISTRIBUTED_OUTPUT/AM")
+      am
+    }, "(Distributed) aggregation model")
+
+    val itemBasedProbability = 0.5
+    val scModel = time({
+      val random = new Random
+      // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+      val modelsPair = ctx.parallelize(ubm.zip(ibm))
+      val scm = modelsPair.map({
+        // for each pair
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // based on the probability, take the rank of one model
+          if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+          else (user1, (song1, rank1))
+      })
+      scm.saveAsTextFile("DISTRIBUTED_OUTPUT/SCM")
+      scm
+    }, "(Distributed) stochastic combination model")
+
     // writing on files
-    writeModelOnFile(ubModel.collect(), "models/userBasedModelD.txt")
-    writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
+//    writeModelOnFile(ubModel.collect(), "models/userBasedModelD.txt")
+//    writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
 //    writeModelOnFile(lcModel.collect(), "models/linearCombinationModelD.txt")
+//    writeModelOnFile(aModel.collect(), "models/aggregationModelD.txt")
+//    writeModelOnFile(scModel.collect(), "models/stochasticCombinationModelD.txt")
   }
 }
