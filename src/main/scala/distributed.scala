@@ -1,3 +1,4 @@
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
 import java.io.PrintWriter
@@ -21,12 +22,16 @@ object distributed extends Serializable {
     result
   }
 
-  def writeModelOnFile(model: Array[Seq[(String, (String, Double))]], outputFileName: String = ""): Unit = {
+  def writeModelOnFile[T](model: Array[T], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
-    model.iterator foreach (el => el.map(el2 => {
-      out.write(s"${el2._1}\t${el2._2._1}\t${el2._2._2}\n")
-    }))
+    model foreach({
+      case seq: Seq[(String, (String, Double))] => seq foreach (el2 => {
+        out.write(s"${el2._1}\t${el2._2._1}\t${el2._2._2}\n")
+      })
+      case tuple: (String, (String, Double)) =>
+        out.write(s"${tuple._1}\t${tuple._2._1}\t${tuple._2._2}\n")
+    })
     out.close()
   }
 
@@ -40,7 +45,7 @@ object distributed extends Serializable {
     model
   }
   def main(args: Array[String]): Unit = {
-    val fileName: String = "/home/gabbo/University/Magistrale/scpproject/MusicReccomendation/src/main/resources/train_triplets_5k.txt"
+    val fileName: String = "/home/gabbo/University/Magistrale/scpproject/MusicReccomendation/src/main/resources/train_triplets_10k.txt"
     def in: BufferedSource = Source.fromFile(fileName)
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     val ctx = new SparkContext(conf)
@@ -83,6 +88,8 @@ object distributed extends Serializable {
     // get data from file
     val (usersList, songsList, usersToSongsMap, songsToUsersMap) = songsByUser()
 
+    println(s"File \'$fileName\' contains ${usersList.length} users and ${songsList.length} songs")
+
     // create users and songs RDD
     /*
     NOTE: you cannot map a RDD inside a transformation of another RDD (e.g. users.map(u=> songs.map(s=> ...))
@@ -107,6 +114,11 @@ object distributed extends Serializable {
       def getModel(user: String) = {
         // foreach song, calculate the score for the user
         songsList.map(s => user -> (s, rank(user, s)))
+      }
+
+      def getModel2(song: String) = {
+        // foreach song, calculate the score for the user
+        usersList.map(u => u -> (song, rank(u, song)))
       }
 
       def rank (user: String, song: String) = {
@@ -145,6 +157,11 @@ object distributed extends Serializable {
         // foreach song, calculate the score for the user
         usersList.map(u => u -> (song, rank(u, song)))
       }
+
+      def getModel2(user: String) = {
+        // foreach song, calculate the score for the user
+        songsList.map(s => user -> (s, rank(user, s)))
+      }
     }
 
     val ubModel = time({
@@ -154,12 +171,23 @@ object distributed extends Serializable {
       ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM")
       ubModel
     }, "(Distributed) user-based")
+    val ubModel2 = time({
+      val ubModel = songs.map(s => ubmFunctions.getModel2(s))
+      ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM2")
+      ubModel
+    }, "(Distributed) user-based 2")
 
     // TODO: probably we can iterate on users RDD instead of songs RDD (in this case we can delete the latter)
     val ibModel = time({
       // for each song, get item-based ranking
       val ibModel = songs.map(s => ibmFunctions.getModel(s))
       ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM")
+      ibModel
+    }, "(Distributed) item-based")
+    val ibModel2 = time({
+      // for each song, get item-based ranking
+      val ibModel = users.map(u => ibmFunctions.getModel2(u))
+      ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM2")
       ibModel
     }, "(Distributed) item-based")
 
@@ -218,10 +246,10 @@ object distributed extends Serializable {
     }, "(Distributed) stochastic combination model")
 
     // writing on files
-//    writeModelOnFile(ubModel.collect(), "models/userBasedModelD.txt")
-//    writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
-//    writeModelOnFile(lcModel.collect(), "models/linearCombinationModelD.txt")
-//    writeModelOnFile(aModel.collect(), "models/aggregationModelD.txt")
-//    writeModelOnFile(scModel.collect(), "models/stochasticCombinationModelD.txt")
+    writeModelOnFile(ubModel.collect(), "models/userBasedModelD.txt")
+    writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
+    writeModelOnFile(lcModel.collect(), "models/linearCombinationModelD.txt")
+    writeModelOnFile(aModel.collect(), "models/aggregationModelD.txt")
+    writeModelOnFile(scModel.collect(), "models/stochasticCombinationModelD.txt")
   }
 }
