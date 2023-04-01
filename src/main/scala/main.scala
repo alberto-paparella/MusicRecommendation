@@ -12,7 +12,7 @@ object main {
     // verbosity of the output
     val verbose = true
     // name of the file containing the considered dataset
-    val fileName: String = "train_triplets_2k.txt"
+    val fileName: String = "train_triplets_5k.txt"
 
     // import dataset
     def in: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource(fileName).getPath)
@@ -62,12 +62,40 @@ object main {
     // print number of total users and songs in the file
     if (verbose) println(s"File \'$fileName\' contains ${users.length} users and ${songs.length} songs")
 
+    val trainUsers = users.grouped(users.length-10).toList.head
+    val testUsers = users.grouped(users.length-10).toList(1)
+
+    val trainSet = trainUsers.map(u => (u,usersToSongsMap(u))).toMap
+    val testLabels = testUsers.map(u => (u, usersToSongsMap(u))).toMap
+
+    def calTestSet(testLabels: Map[String, List[String]]) = {
+      for {u <- testLabels}
+        yield (u._1, u._2.grouped((u._2.length / 2) + 1).toList.head)
+    }
+
+    val testSet = calTestSet(testLabels)
+
+    /*
+    for {u <- testLabels}
+      println(u._2.length)
+
+    println("##########################")
+
+    for {u <- testSet}
+      println(u._2.length)
+     */
+
+    print(testLabels.head)
+
+    //val input = trainSet ++ testSet
+
     // instantiate musicRecommender
-    val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, usersToSongsMap, songsToUsersMap, execution)
+    //val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, usersToSongsMap, songsToUsersMap, execution)
+    //val musicRecommender: MusicRecommender = new MusicRecommender(users, songs, input, songsToUsersMap, execution)
 
     // calculating user-based model
     //musicRecommender.getUserBasedModel()
-    musicRecommender.getItemBasedModel()
+    //musicRecommender.getItemBasedModel()
     //musicRecommender.getLinearCombinationModel(0.5)
     //musicRecommender.getAggregationModel(0.5)
     //musicRecommender.getStochasticCombinationModel(0.5)
