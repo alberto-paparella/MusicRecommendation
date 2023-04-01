@@ -1,7 +1,5 @@
 package music_recommandation
 
-import my_utils.MyUtils
-
 import java.io._
 import scala.collection.mutable
 import scala.collection.immutable._
@@ -113,9 +111,9 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
 
     // Calculate model
     if (parallel)
-      MyUtils.time(getModelP(rank), "(Parallel) user-based model")
+      getModelP(rank)
     else
-      MyUtils.time(getModel(rank), "(Sequential) user-based model")
+      getModel(rank)
   }
 
   def getItemBasedModel(parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
@@ -144,36 +142,36 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
 
     // Calculate model
     if (parallel)
-      MyUtils.time(getModelP(rank), "(Parallel) item-based model")
+      getModelP(rank)
     else
-      MyUtils.time(getModel(rank), "(Sequential) item-based model")
+      getModel(rank)
   }
 
-  def getLinearCombinationModel(ubm: List[(String, String, Double)], ibm: List[(String, String, Double)],
-                                alpha: Double, parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
-    def linearCombination(): IterableOnce[(String, (String, Double))] = {
-      if (parallel) {
-        // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
-        ubm.zip(ibm).par.map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-            // return (user, song, ranks linear combination)
-            (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
-        })
-      } else {
-        // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
-        ubm.zip(ibm).map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-            // return (user, song, ranks linear combination)
-            (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
-        })
-      }
+  def getLinearCombinationModel(ubm: List[(String, String, Double)],
+                                ibm: List[(String, String, Double)],
+                                alpha: Double,
+                                parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+
+    if (parallel) {
+      // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
+      ubm.zip(ibm).par.map({
+        // for each pair
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // return (user, song, ranks linear combination)
+          (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
+      })
+    } else {
+      // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
+      ubm.zip(ibm).map({
+        // for each pair
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // return (user, song, ranks linear combination)
+          (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
+      })
     }
 
-    MyUtils.time(linearCombination(), "linear combination model")
   }
 
   def getAggregationModel(ubm: List[(String, String, Double)], ibm: List[(String, String, Double)],
@@ -186,46 +184,44 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       System.exit(-1);
     }
 
-    def aggregation(): IterableOnce[(String, (String, Double))] = {
-      if (parallel) {
-        val length = ubm.length
-        val itemBasedThreshold = (itemBasedPercentage * length).toInt
-        // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-        // TODO: find a better solution than zipWithIndex (may be a slow solution)
-        ubm.zip(ibm).zipWithIndex.par.map({
-          // for each pair
-          case (couple, index) => couple match {
-            case ((user1, song1, rank1), (user2, song2, rank2)) =>
-              if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-              // based on the percentage, take the rank of one model
-              if (index < itemBasedThreshold) (user1, (song1, rank2))
-              else (user1, (song1, rank1));
-          }
-        })
-      } else {
-        val length = ubm.length
-        val itemBasedThreshold = (itemBasedPercentage * length).toInt
-        // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-        // TODO: find a better solution than zipWithIndex (may be a slow solution)
-        ubm.zip(ibm).zipWithIndex.map({
-          // for each pair
-          case (couple, index) => couple match {
-            case ((user1, song1, rank1), (user2, song2, rank2)) =>
-              if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-              // based on the percentage, take the rank of one model
-              if (index < itemBasedThreshold) (user1, (song1, rank2))
-              else (user1, (song1, rank1))
-          }
-        })
-      }
+    if (parallel) {
+      val length = ubm.length
+      val itemBasedThreshold = (itemBasedPercentage * length).toInt
+      // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+      // TODO: find a better solution than zipWithIndex (may be a slow solution)
+      ubm.zip(ibm).zipWithIndex.par.map({
+        // for each pair
+        case (couple, index) => couple match {
+          case ((user1, song1, rank1), (user2, song2, rank2)) =>
+            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+            // based on the percentage, take the rank of one model
+            if (index < itemBasedThreshold) (user1, (song1, rank2))
+            else (user1, (song1, rank1));
+        }
+      })
+    } else {
+      val length = ubm.length
+      val itemBasedThreshold = (itemBasedPercentage * length).toInt
+      // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
+      // TODO: find a better solution than zipWithIndex (may be a slow solution)
+      ubm.zip(ibm).zipWithIndex.map({
+        // for each pair
+        case (couple, index) => couple match {
+          case ((user1, song1, rank1), (user2, song2, rank2)) =>
+            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+            // based on the percentage, take the rank of one model
+            if (index < itemBasedThreshold) (user1, (song1, rank2))
+            else (user1, (song1, rank1))
+        }
+      })
     }
 
-    MyUtils.time(aggregation(), "aggregation model")
   }
 
-  def getStochasticCombinationModel(ubm: List[(String, String, Double)], ibm: List[(String, String, Double)],
+  def getStochasticCombinationModel(ubm: List[(String, String, Double)],
+                                    ibm: List[(String, String, Double)],
                                     itemBasedProbability: Double = 0.5,
-                                      parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+                                    parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
 
     // Exit if percentage is not in the range 0 <= p <= 1
     if (itemBasedProbability < 0 || itemBasedProbability > 1) {
@@ -233,33 +229,30 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       System.exit(-1);
     }
 
-    def stochasticCombination(): IterableOnce[(String, (String, Double))] = {
-      if (parallel) {
-        val random = new Random
-        // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-        ubm.zip(ibm).par.map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-            // based on the probability, take the rank of one model
-            if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
-            else (user1, (song1, rank1))
-        })
-      } else {
-        val random = new Random
-        // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-        ubm.zip(ibm).map({
-          // for each pair
-          case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
-            // based on the probability, take the rank of one model
-            if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
-            else (user1, (song1, rank1))
-        })
-      }
+    if (parallel) {
+      val random = new Random
+      // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+      ubm.zip(ibm).par.map({
+        // for each pair
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // based on the probability, take the rank of one model
+          if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+          else (user1, (song1, rank1))
+      })
+    } else {
+      val random = new Random
+      // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
+      ubm.zip(ibm).map({
+        // for each pair
+        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // based on the probability, take the rank of one model
+          if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
+          else (user1, (song1, rank1))
+      })
     }
 
-    MyUtils.time(stochasticCombination(), "stochastic combination model")
   }
 
   def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
