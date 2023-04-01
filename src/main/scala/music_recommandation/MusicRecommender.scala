@@ -3,27 +3,32 @@ package music_recommandation
 import my_utils.MyUtils
 
 import java.io._
+import scala.collection.mutable
+import scala.collection.immutable._
 import scala.collection.parallel.CollectionConverters._
 import scala.io._
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
 
-//class MusicRecommender(private val users: IterableOnce[String], private val songs: IterableOnce[String],
-//                       private val usersToSongsMap: Map[String, List[String]],
-//                       private val songsToUsersMap: Map[String, List[String]], execution: Int = 0) {
-class MusicRecommender(train: BufferedSource, test: BufferedSource, execution: Int = 0) {
+class MusicRecommender(train: BufferedSource, test: BufferedSource) {
 
-  //private def songsByUser(in: BufferedSource): (List[String], List[String], Map[String, List[String]], Map[String, List[String]]) = {
-  private def songsByUser(in: BufferedSource): (List[String], Map[String, List[String]], Map[String, List[String]]) = {
+  /**
+   * ******************************************************************************************
+   * CLASS INITIALIZATION
+   * ******************************************************************************************
+   */
+
+  /**
+   * Read file containing the data storing them in their relative structures
+   * @param in file containing the data
+   * @return list of users in the file and map of list of songs for each user
+   */
+  private def extractData(in: BufferedSource): (List[String], Map[String, List[String]]) = {
     // all users in file
     val usersInFile = collection.mutable.Set[String]()
-    // all songs in file
-    //val songsInFile = collection.mutable.Set[String]()
     // map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
-    val songsUsersMap = collection.mutable.Map[String, List[String]]()
-    // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
-    val usersSongsMap = collection.mutable.Map[String, List[String]]()
+    val usersToSongsMap = collection.mutable.Map[String, List[String]]()
     // for each split line on "\t"
     for {
       line <- in.getLines().toList
@@ -31,16 +36,15 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource, execution: I
       case Array(u, s, _) => {
         // add user and song
         usersInFile add u
-        //songsInFile add s
-        songsInFiles add s
+        mutSongs add s
         // update map with cases
-        songsUsersMap.updateWith(u) {
+        usersToSongsMap.updateWith(u) {
           // if user is already in the map, add song to the list of listened songs
           case Some(list: List[String]) => Some(list :+ s)
           // else add song to a new list related to the user
           case None => Some(List(s))
         }
-        usersSongsMap.updateWith(s) {
+        mutSongsToUsersMap.updateWith(s) {
           // if song is already in the map, add user to the list of users who listened to the song
           case Some(list: List[String]) => Some(list :+ u)
           // else add song to a new list related to the user
@@ -48,49 +52,57 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource, execution: I
         }
       }
     }
-    //(usersInFile.toList, songsInFile.toList, songsUsersMap.toMap, usersSongsMap.toMap)
-    (usersInFile.toList, songsUsersMap.toMap, usersSongsMap.toMap)
+    (usersInFile.toList, usersToSongsMap.toMap)
   }
 
-  // get train and test data from file
-  val songsInFiles = collection.mutable.Set[String]()
-  val (trainUsers, trainUsersToSongsMap, trainSongsToUsersMap) = songsByUser(train)
-  val (testUsers, testUsersToSongsMap, testSongsToUsersMap) = songsByUser(test)
-  val songs = songsInFiles.toList
+  // store all songs from both files
+  private val mutSongs = collection.mutable.Set[String]()
+  // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
+  private val mutSongsToUsersMap = collection.mutable.Map[String, List[String]]()
+  // get train and test data from files
+  private val (trainUsers, trainUsersToSongsMap) = extractData(train)
+  private val (testUsers, testUsersToSongsMap) = extractData(test)
+  // convert mutable to immutable list
+  private val songs: List[String] = mutSongs.toList
+  // convert mutable to immutable map
+  private val songsToUsersMap = mutSongsToUsersMap.toMap
+
+  /**
+   * ******************************************************************************************
+   * CLASS METHODS
+   * ******************************************************************************************
+   */
 
   private def getModel(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
-    // Main parallelization happens here
-    execution match {
-      case 0 =>
-        for {
-          u <- testUsers
-          s <- songs
-          if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
-        } yield u -> (s, rank(u, s))
-      case 1 =>
-        for {
-          u <- testUsers.iterator.toSeq.par
-          s <- songs.iterator.toSeq.par
-          if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
-        } yield u -> (s, rank(u, s))
-    }
+      for {
+        u <- testUsers
+        s <- songs
+        if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+      } yield u -> (s, rank(u, s))
   }
 
-  def getUserBasedModel(): Unit = {
+  private def getModelP(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
+    // Main parallelization happens here
+      for {
+        u <- testUsers.iterator.toSeq.par
+        s <- songs.iterator.toSeq.par
+        if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+      } yield u -> (s, rank(u, s))
+  }
+
+  def getUserBasedModel(parallel: Boolean = false): IterableOnce[(String, (String, Double))]  = {
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
-      // Here, parallelization does not improve performances (TODO: check)
       val numerator = songs.iterator.toSeq.map(song =>
         // if both users listened to song return 1, else 0
         if (testUsersToSongsMap(user1).contains(song) && trainUsersToSongsMap(user2).contains(song)) 1 else 0
-      ).fold(0) { (acc, tup) => acc + tup }
+      ).sum
       // usersToSongMap(user).length represents how many songs the user listened to
       val denominator = sqrt(testUsersToSongsMap(user1).length) * sqrt(trainUsersToSongsMap(user2).length)
       if (denominator != 0) numerator / denominator else 0.0
     }
 
     def rank(user: String, song: String): Double = {
-      // Here, parallelization does not improve performances (TODO: check)
       for {
         u2 <- trainUsers
         if u2 != user && trainUsersToSongsMap(u2).contains(song)
@@ -100,33 +112,13 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource, execution: I
     } sum
 
     // Calculate model
-    val userBasedModel = execution match {
-      case 0 =>
-        MyUtils.time(getModel(rank), "(Sequential) user-based model")
-      case 1 => MyUtils.time(getModel(rank), "(Parallel) user-based model")
-      case 2 =>
-        // TODO
-        System.exit(1)
-        MyUtils.time(getModel(rank), "(Distributed) user-based model")
-      case _ =>
-        System.exit(-1)
-        MyUtils.time(getModel(rank), "")
-    }
-
-    // Save model to file
-    execution match {
-      case 0 => writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
-      case 1 => writeModelOnFile(userBasedModel, "models/userBasedModelP.txt")
-      case 2 =>
-        // TODO
-        System.exit(1)
-        writeModelOnFile(userBasedModel, "models/userBasedModelD.txt")
-      case _ =>
-        System.exit(-1)
-    }
+    if (parallel)
+      MyUtils.time(getModelP(rank), "(Parallel) user-based model")
+    else
+      MyUtils.time(getModel(rank), "(Sequential) user-based model")
   }
 
-  private def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
+  def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
     model.iterator foreach (el => {
