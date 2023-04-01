@@ -19,12 +19,16 @@ object main {
     val musicRecommender: MusicRecommender = new MusicRecommender(train, test)
     if (verbose) println("MusicRecommender instanced")
 
-    // calculating user-based model (both sequential and parallel)
+    // calculating models (both sequential and parallel)
     val userBasedModel = musicRecommender.getUserBasedModel(parallel=false)
     val userBasedModelP = musicRecommender.getUserBasedModel(parallel=true)
+    val itemBasedModel = musicRecommender.getItemBasedModel(parallel = false)
+    val itemBasedModelP = musicRecommender.getItemBasedModel(parallel = true)
 
     // saving user-based model (both sequential and parallel)
     musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
-    musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModelP.txt")
+    musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
+    musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
+    musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
   }
 }

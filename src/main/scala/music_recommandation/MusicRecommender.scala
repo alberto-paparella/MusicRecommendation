@@ -118,6 +118,37 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       MyUtils.time(getModel(rank), "(Sequential) user-based model")
   }
 
+  def getItemBasedModel(parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+    // it calculates the cosine similarity between two songs
+    def cosineSimilarity(song1: String, song2: String): Double = {
+      // Here, parallelization does not improve performances (TODO: check)
+      val numerator = trainUsers.iterator.map(user =>
+          // if the user listened to both songs return 1, else 0
+          if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0
+      ).sum
+      // pre-calculate denominator to catch if it is equal to 0
+      val denominator = sqrt(songsToUsersMap(song1).length) * sqrt(songsToUsersMap(song2).length)
+      if (denominator != 0) numerator / denominator else 0
+    }
+
+    def rank(user: String, song: String): Double = {
+      // Here, parallelization does not improve performances (TODO: check)
+      for {
+        s2 <- songs
+        if s2 != song
+        if testUsersToSongsMap(user).contains(s2)
+      } yield {
+        cosineSimilarity(song, s2)
+      }
+    } sum
+
+    // Calculate model
+    if (parallel)
+      MyUtils.time(getModelP(rank), "(Parallel) item-based model")
+    else
+      MyUtils.time(getModel(rank), "(Sequential) item-based model")
+  }
+
   def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
