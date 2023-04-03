@@ -12,8 +12,8 @@ object main {
     val verbose = true
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_500_10.txt").getPath)
-    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_500_10.txt").getPath)
+    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_100_10.txt").getPath)
+    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_100_10.txt").getPath)
     if (verbose) println("Loaded files")
 
     // instantiate musicRecommender

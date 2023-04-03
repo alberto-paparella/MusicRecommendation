@@ -1,7 +1,6 @@
 package music_recommandation
 
 import java.io._
-import scala.collection.mutable
 import scala.collection.immutable._
 import scala.collection.parallel.CollectionConverters._
 import scala.io._

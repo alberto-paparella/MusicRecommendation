@@ -7,20 +7,9 @@ import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
 
-object distributed extends Serializable {
+import my_utils.MyUtils
 
-  def time[R](block: => R, operation: String = "unknown"): R = {
-    // get start time
-    val t0 = System.nanoTime()
-    // execute code
-    val result = block
-    // get end time
-    val t1 = System.nanoTime()
-    // print elapsed time
-    println(s"\n\n\nElapsed time for $operation:\t" + (t1 - t0) / 1000000 + "ms\n\n\n")
-    // return the result
-    result
-  }
+object distributed extends Serializable {
 
   def writeModelOnFile[T](model: Array[T], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
@@ -45,20 +34,25 @@ object distributed extends Serializable {
     model
   }
   def main(args: Array[String]): Unit = {
-    val fileName: String = "/home/gabbo/University/Magistrale/scpproject/MusicReccomendation/src/main/resources/train_triplets_10k.txt"
-    def in: BufferedSource = Source.fromFile(fileName)
+
+    // import train and test datasets
+    def train: BufferedSource = Source.fromFile("/media/alberto/5cc4e6c6-e71d-42b1-b6ec-bdfab5eabe1c/unibo/scp/MusicReccomendation/src/main/resources/train_100_10.txt")
+    def test: BufferedSource = Source.fromFile("/media/alberto/5cc4e6c6-e71d-42b1-b6ec-bdfab5eabe1c/unibo/scp/MusicReccomendation/src/main/resources/test_100_10.txt")
+
+    // instantiate spark context
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     val ctx = new SparkContext(conf)
 
-    def songsByUser(): (Seq[String], Seq[String], Map[String, List[String]], Map[String, List[String]]) = {
+    // store all songs from both files
+    val mutSongs = collection.mutable.Set[String]()
+    // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
+    val mutSongsToUsersMap = collection.mutable.Map[String, List[String]]()
+
+    def extractData(in: BufferedSource): (Seq[String], Map[String, List[String]]) = {
       // all users in file
       val usersInFile = collection.mutable.Set[String]()
-      // all songs in file
-      val songsInFile = collection.mutable.Set[String]()
       // map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
-      val songsUsersMap = collection.mutable.Map[String, List[String]]()
-      // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
-      val usersSongsMap = collection.mutable.Map[String, List[String]]()
+      val usersToSongsMap = collection.mutable.Map[String, List[String]]()
       // for each split line on "\t"
       for {
         line <- in.getLines().toList
@@ -66,15 +60,15 @@ object distributed extends Serializable {
         case Array(u, s, _) => {
           // add user and song
           usersInFile add u
-          songsInFile add s
+          mutSongs add s
           // update map with cases
-          songsUsersMap.updateWith(u) {
+          usersToSongsMap.updateWith(u) {
             // if user is already in the map, add song to the list of listened songs
             case Some(list: List[String]) => Some(list :+ s)
             // else add song to a new list related to the user
             case None => Some(List(s))
           }
-          usersSongsMap.updateWith(s) {
+          mutSongsToUsersMap.updateWith(s) {
             // if song is already in the map, add user to the list of users who listened to the song
             case Some(list: List[String]) => Some(list :+ u)
             // else add song to a new list related to the user
@@ -82,20 +76,23 @@ object distributed extends Serializable {
           }
         }
       }
-      (usersInFile.toSeq, songsInFile.toSeq, songsUsersMap.toMap, usersSongsMap.toMap)
+      (usersInFile.toSeq, usersToSongsMap.toMap)
     }
 
-    // get data from file
-    val (usersList, songsList, usersToSongsMap, songsToUsersMap) = songsByUser()
-
-    println(s"File \'$fileName\' contains ${usersList.length} users and ${songsList.length} songs")
+    // get train and test data from files
+    val (trainUsers, trainUsersToSongsMap) = extractData(train)
+    val (testUsersList, testUsersToSongsMap) = extractData(test)
+    // convert mutable to immutable list
+    val songsList: Seq[String] = mutSongs.toSeq
+    // convert mutable to immutable map
+    val songsToUsersMap = mutSongsToUsersMap.toMap
 
     // create users and songs RDD
     /*
     NOTE: you cannot map a RDD inside a transformation of another RDD (e.g. users.map(u=> songs.map(s=> ...))
     That's why we need usersList, songsList(:Seq[String]) AND users, songs(:RDD[String])
     */
-    val users = ctx.parallelize(usersList)
+    val testUsers = ctx.parallelize(testUsersList)
     val songs = ctx.parallelize(songsList)
 
     object ubmFunctions {
@@ -104,10 +101,10 @@ object distributed extends Serializable {
         // Here, parallelization does not improve performances (TODO: check)
         val numerator = songsList.map(song =>
           // if both users listened to song return 1, else 0
-          if (usersToSongsMap(user1).contains(song) && usersToSongsMap(user2).contains(song)) 1 else 0
+          if (testUsersToSongsMap(user1).contains(song) && trainUsersToSongsMap(user2).contains(song)) 1 else 0
         ).sum
         // usersToSongMap(user).length represents how many songs the user listened to
-        val denominator = sqrt(usersToSongsMap(user1).length) * sqrt(usersToSongsMap(user2).length)
+        val denominator = sqrt(testUsersToSongsMap(user1).length) * sqrt(trainUsersToSongsMap(user2).length)
         if (denominator != 0) numerator / denominator else 0.0
       }
 
@@ -118,12 +115,12 @@ object distributed extends Serializable {
 
       def getModel2(song: String) = {
         // foreach song, calculate the score for the user
-        usersList.map(u => u -> (song, rank(u, song)))
+        testUsersList.map(u => u -> (song, rank(u, song)))
       }
 
       def rank (user: String, song: String) = {
         for {
-          u2 <- usersList filter (u => u != user && usersToSongsMap(u).contains(song))
+          u2 <- trainUsers filter (u => u != user && trainUsersToSongsMap(u).contains(song))
         } yield {
           cosineSimilarity(user, u2)
         }
@@ -135,7 +132,7 @@ object distributed extends Serializable {
       // it calculates the cosine similarity between two songs
       def cosineSimilarity(song1: String, song2: String): Double = {
         // Here, parallelization does not improve performances (TODO: check)
-        val numerator = usersList.map(user => (
+        val numerator = trainUsers.map(user => (
           // if the user listened to both songs return 1, else 0
           if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0
           )).sum
@@ -155,7 +152,7 @@ object distributed extends Serializable {
 
       def getModel(song: String) = {
         // foreach song, calculate the score for the user
-        usersList.map(u => u -> (song, rank(u, song)))
+        testUsersList.map(u => u -> (song, rank(u, song)))
       }
 
       def getModel2(user: String) = {
@@ -164,29 +161,29 @@ object distributed extends Serializable {
       }
     }
 
-    val ubModel = time({
+    val ubModel = MyUtils.time({
       // for each user, get user-based ranking
-      val ubModel = users.map(u => ubmFunctions.getModel(u))
+      val ubModel = testUsers.map(u => ubmFunctions.getModel(u))
       // save RDD on file
       ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM")
       ubModel
     }, "(Distributed) user-based")
-    val ubModel2 = time({
+    val ubModel2 = MyUtils.time({
       val ubModel = songs.map(s => ubmFunctions.getModel2(s))
       ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM2")
       ubModel
     }, "(Distributed) user-based 2")
 
     // TODO: probably we can iterate on users RDD instead of songs RDD (in this case we can delete the latter)
-    val ibModel = time({
+    val ibModel = MyUtils.time({
       // for each song, get item-based ranking
       val ibModel = songs.map(s => ibmFunctions.getModel(s))
       ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM")
       ibModel
     }, "(Distributed) item-based")
-    val ibModel2 = time({
+    val ibModel2 = MyUtils.time({
       // for each song, get item-based ranking
-      val ibModel = users.map(u => ibmFunctions.getModel2(u))
+      val ibModel = testUsers.map(u => ibmFunctions.getModel2(u))
       ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM2")
       ibModel
     }, "(Distributed) item-based")
@@ -194,7 +191,7 @@ object distributed extends Serializable {
     val lcAlpha = 0.5
     val ubm = importModel("models/userBasedModel.txt")
     val ibm = importModel("models/itemBasedModel.txt")
-    val lcModel = time({
+    val lcModel = MyUtils.time({
       val modelsPair = ctx.parallelize(ubm.zip(ibm))
       // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
       val lc = modelsPair.map {
@@ -209,7 +206,7 @@ object distributed extends Serializable {
     }, "(Distributed) linear combination")
 
     val itemBasedPercentage = 0.5
-    val aModel = time({
+    val aModel = MyUtils.time({
       val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
@@ -229,7 +226,7 @@ object distributed extends Serializable {
     }, "(Distributed) aggregation model")
 
     val itemBasedProbability = 0.5
-    val scModel = time({
+    val scModel = MyUtils.time({
       val random = new Random
       // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
       val modelsPair = ctx.parallelize(ubm.zip(ibm))
