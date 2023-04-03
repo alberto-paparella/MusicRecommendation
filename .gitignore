@@ -1,6 +1,7 @@
 .bsp/*
 .idea/*
-project/*
+project/project/*
+project/target/*
 results/*
 src/main/resources/*.txt
 target/*
