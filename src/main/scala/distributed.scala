@@ -27,7 +27,7 @@ object distributed extends Serializable {
   private def importModel(pathToModel: String): Seq[(String, String, Double)] = {
     def modelFile: BufferedSource = Source.fromResource(pathToModel)
 
-    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.IeeeOrdering.reverse)
+    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.reverse)
     val model = modelFile.getLines().toList map (line => line split "\t" match {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
     }) sorted ordering
@@ -61,19 +61,9 @@ object distributed extends Serializable {
           // add user and song
           usersInFile add u
           mutSongs add s
-          // update map with cases
-          usersToSongsMap.updateWith(u) {
-            // if user is already in the map, add song to the list of listened songs
-            case Some(list: List[String]) => Some(list :+ s)
-            // else add song to a new list related to the user
-            case None => Some(List(s))
-          }
-          mutSongsToUsersMap.updateWith(s) {
-            // if song is already in the map, add user to the list of users who listened to the song
-            case Some(list: List[String]) => Some(list :+ u)
-            // else add song to a new list related to the user
-            case None => Some(List(u))
-          }
+          // update maps
+          usersToSongsMap.update(u, s :: usersToSongsMap.getOrElse(u, Nil))
+          mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
         }
       }
       (usersInFile.toSeq, usersToSongsMap.toMap)

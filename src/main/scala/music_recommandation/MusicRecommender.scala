@@ -1,8 +1,9 @@
 package music_recommandation
 
 import java.io._
+import scala.collection.GenSeq
 import scala.collection.immutable._
-import scala.collection.parallel.CollectionConverters._
+import scala.collection.parallel.ParSeq
 import scala.io._
 import scala.language.postfixOps
 import scala.math.sqrt
@@ -34,19 +35,9 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
         // add user and song
         usersInFile add u
         mutSongs add s
-        // update map with cases
-        usersToSongsMap.updateWith(u) {
-          // if user is already in the map, add song to the list of listened songs
-          case Some(list: List[String]) => Some(list :+ s)
-          // else add song to a new list related to the user
-          case None => Some(List(s))
-        }
-        mutSongsToUsersMap.updateWith(s) {
-          // if song is already in the map, add user to the list of users who listened to the song
-          case Some(list: List[String]) => Some(list :+ u)
-          // else add song to a new list related to the user
-          case None => Some(List(u))
-        }
+        // update maps
+        usersToSongsMap.update(u, s :: usersToSongsMap.getOrElse(u, Nil))
+        mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
       }
     }
     (usersInFile.toList, usersToSongsMap.toMap)
@@ -70,7 +61,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
    * ******************************************************************************************
    */
 
-  private def getModel(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
+  private def getModel(rank: (String, String) => Double): List[(String, (String, Double))] = {
       for {
         u <- testUsers
         s <- songs
@@ -78,7 +69,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       } yield u -> (s, rank(u, s))
   }
 
-  private def getModelP(rank: (String, String) => Double): IterableOnce[(String, (String, Double))] = {
+  private def getModelP(rank: (String, String) => Double): ParSeq[(String, (String, Double))] = {
     // Main parallelization happens here
       for {
         u <- testUsers.iterator.toSeq.par
@@ -87,7 +78,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       } yield u -> (s, rank(u, s))
   }
 
-  def getUserBasedModel(parallel: Boolean = false): IterableOnce[(String, (String, Double))]  = {
+  def getUserBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))]  = {
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
       val numerator = songs.iterator.toSeq.map(song =>
@@ -115,7 +106,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       getModel(rank)
   }
 
-  def getItemBasedModel(parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+  def getItemBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
       // Here, parallelization does not improve performances (TODO: check)
@@ -149,7 +140,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
   def getLinearCombinationModel(ubm: List[(String, String, Double)],
                                 ibm: List[(String, String, Double)],
                                 alpha: Double,
-                                parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+                                parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
 
     if (parallel) {
       // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
@@ -175,7 +166,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
 
   def getAggregationModel(ubm: List[(String, String, Double)], ibm: List[(String, String, Double)],
                           itemBasedPercentage: Double = 0.5,
-                          parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+                          parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
 
     // Exit if percentage is not in the range 0 <= p <= 1
     if (itemBasedPercentage < 0 || itemBasedPercentage > 1) {
@@ -220,7 +211,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
   def getStochasticCombinationModel(ubm: List[(String, String, Double)],
                                     ibm: List[(String, String, Double)],
                                     itemBasedProbability: Double = 0.5,
-                                    parallel: Boolean = false): IterableOnce[(String, (String, Double))] = {
+                                    parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
 
     // Exit if percentage is not in the range 0 <= p <= 1
     if (itemBasedProbability < 0 || itemBasedProbability > 1) {
@@ -254,10 +245,10 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
 
   }
 
-  def writeModelOnFile(model: IterableOnce[(String, (String, Double))], outputFileName: String = ""): Unit = {
+  def writeModelOnFile(model: GenSeq[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
-    model.iterator foreach (el => {
+    model foreach (el => {
       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
     })
     out.close()
@@ -266,7 +257,7 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
   def importModelFromFile(pathToModel: String): List[(String, String, Double)] = {
     def modelFile: BufferedSource = Source.fromResource(pathToModel)
 
-    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.IeeeOrdering.reverse)
+    val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.reverse)
     val model = modelFile.getLines().toList map (line => line split "\t" match {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
     }) sorted ordering

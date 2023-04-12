@@ -1,6 +1,6 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "2.13.10"
+ThisBuild / scalaVersion := "2.12.14"
 
 lazy val root = (project in file("."))
   .settings(
@@ -8,6 +8,5 @@ lazy val root = (project in file("."))
   )
 
 libraryDependencies ++= Seq(
-  "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
-  "org.apache.spark" %% "spark-core" % "3.3.2"
+  "org.apache.spark" %% "spark-core" % "3.3.0"
 )
