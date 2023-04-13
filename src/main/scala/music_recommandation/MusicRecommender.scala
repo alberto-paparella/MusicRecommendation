@@ -55,6 +55,26 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   // convert mutable to immutable map
   private val songsToUsersMap = mutSongsToUsersMap.toMap
 
+  private def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
+    val testLabels = collection.mutable.Map[String, List[String]]()
+    val newSongs = collection.mutable.Set[String]()
+    // for each split line on "\t"
+    for {
+      line <- in.getLines().toList
+    } yield line split "\t" match {
+      case Array(u, s, _) => {
+        // users are the same as in testUsers, while testLabels could contain new songs
+        newSongs add s
+        // update map
+        testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
+      }
+    }
+    (testLabels.toMap, newSongs.toList)
+  }
+
+  // validation data (import just once at initialization)
+  private val (testLabels, newSongs) = importTestLabels(testLabelsFile)
+
   /**
    * ******************************************************************************************
    * CLASS METHODS
@@ -267,31 +287,22 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   /**
    * Convert the prediction scores to class labels
    * @param model the predictions scores for test users
+   * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
    * @return map of list of songs the user will listen predicted by the model for each user
    */
-  private def predictionToClassLabels(model: GenSeq[(String, (String, Double))]):Map[String, List[String]] = {
+  private def predictionToClassLabels(model: GenSeq[(String, (String, Double))], threshold: Double = 0.0):Map[String, List[String]] = {
     // @model contains the prediction scores for test users
     val predictions = collection.mutable.Map[String, List[String]]()
-    model foreach (el => {if (el._2._2 > 0.0) predictions.update(el._1, el._2._1 :: predictions.getOrElse(el._1, Nil))})
+    val min = model.map(el => (el._2._2)).min
+    val max = model.map(el => (el._2._2)).max
+
+    model foreach (el => {
+      // values can be greater than 1, therefore normalization is advised
+      if ((el._2._2 - min) / (max - min) > threshold) predictions.update(el._1, el._2._1 :: predictions.getOrElse(el._1, Nil))
+    })
     predictions.toMap
   }
 
-  private def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
-    val testLabels = collection.mutable.Map[String, List[String]]()
-    val newSongs = collection.mutable.Set[String]()
-    // for each split line on "\t"
-    for {
-      line <- in.getLines().toList
-    } yield line split "\t" match {
-      case Array(u, s, _) => {
-        // users are the same as in testUsers, while testLabels could contain new songs
-        newSongs add s
-        // update map
-        testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
-      }
-    }
-    (testLabels.toMap, newSongs.toList)
-  }
 
   private def confusionMatrix(predictions: Map[String, List[String]], testLabels: Map[String, List[String]], newSongs: List[String]): List[(String, (Int, Int, Int, Int))] = {
     def singleConfusionMatrix(s: String): (Int, Int, Int, Int) = {
@@ -315,39 +326,67 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     }
   }
 
-  private def precision(confusionMatrix: List[(String, (Int, Int, Int, Int))]): List[(String, Double)] = {
+  /**
+   * Calculate precision = TP / (TP + FP)
+   *
+   * @param confusionMatrix
+   * @param threshold
+   * @return
+   */
+  private def precision(confusionMatrix: (Int, Int, Int, Int), threshold: Double = 0.0): Double = {
+    if (confusionMatrix._1 + confusionMatrix._2 > threshold)
+      confusionMatrix._1.toDouble / (confusionMatrix._1 + confusionMatrix._2)
+    else
+      0.0
+  }
+
+  /**
+   * Calculate recall = TP / (TP + FN)
+   *
+   * @param confusionMatrix
+   * @param threshold
+   * @return
+   */
+  private def recall(confusionMatrix: (Int, Int, Int, Int), threshold: Double = 0.0): Double = {
+    if (confusionMatrix._1 + confusionMatrix._4 > threshold)
+      confusionMatrix._1.toDouble / (confusionMatrix._1 + confusionMatrix._4)
+    else
+      0.0
+  }
+
+  private def averagePrecision(confusionMatrix: List[(String, (Int, Int, Int, Int))]):List[(String, Double)] = {
+    val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: 1.0 :: Nil
+
+    def singleAveragePrecision(i: Int): Double = {
+      thresholds.zipWithIndex.map(t => (
+        if (t._2 == (thresholds.length - 1))
+          (recall(confusionMatrix(i)._2, t._1) - 0.0) * precision(confusionMatrix(i)._2, t._1)
+        else
+          (recall(confusionMatrix(i)._2, t._1) - recall(confusionMatrix(i)._2, thresholds(t._2 + 1))) * precision(confusionMatrix(i)._2, t._1)
+        )).sum
+    }
+
     for {
-      (s,(tp,fp,tn,fn)) <- confusionMatrix
+      ((s, _), i) <- confusionMatrix.zipWithIndex
     } yield {
-      if (tp + fp > 0)
-        (s, tp.toDouble / (tp + fp))
-      else
-        (s, 0.0)
+      (s, singleAveragePrecision(i))
     }
   }
 
-  private def recall(confusionMatrix: List[(String, (Int, Int, Int, Int))]): List[(String, Double)] = {
-    for {
-      (s, (tp, fp, tn, fn)) <- confusionMatrix
-    } yield {
-      if (tp + fn > 0)
-        (s, tp.toDouble / (tp + fn))
-      else
-        (s, 0.0)
-    }
+  private def meanAveragePrecision(confusionMatrix: List[(String, (Int, Int, Int, Int))], newSongs: List[String]): Double = {
+    averagePrecision(confusionMatrix).map(ap => (
+      ap._2
+    )).sum / newSongs.length
   }
 
-  def evaluateModel(model: GenSeq[(String, (String, Double))]): Unit = {
+  def evaluateModel(model: GenSeq[(String, (String, Double))]): Double = {
     // @model contains the prediction scores for test users
     // Convert the prediction scores to class labels
     val predictions = predictionToClassLabels(model)
-    val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // Calculate the confusion matrix
     val cm = confusionMatrix(predictions, testLabels, newSongs)
-    // Calculate precision = TP / (TP + FP)
-    val p = precision(cm)
-    // Calculate recall = TP / (TP + FN)
-    val r = recall(cm)
+    // Calculate mAP
+    meanAveragePrecision(cm, newSongs)
   }
 
 }

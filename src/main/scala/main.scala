@@ -21,8 +21,11 @@ object main {
     val musicRecommender: MusicRecommender = new MusicRecommender(train, test, testLabels)
     if (verbose) println("MusicRecommender instanced")
 
-    val userBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model")
-    musicRecommender.evaluateModel(userBasedModel)
+    val userBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Sequential) user-based model")
+    println("mAP: " + MyUtils.time(musicRecommender.evaluateModel(userBasedModel), "(Parallel) user-based model evaluation"))
+
+    val itemBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Sequential) item-based model")
+    println("mAP: " + MyUtils.time(musicRecommender.evaluateModel(itemBasedModel), "(Parallel) item-based model evaluation"))
 
     // calculating models (both sequential and parallel)
     /*
