@@ -315,6 +315,18 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     }
   }
 
+  private def precision(confusionMatrix: List[(String, (Int, Int, Int, Int))]): List[(String, Double)] = {
+    for {
+      (s,(tp,fp,tn,fn)) <- confusionMatrix
+    } yield (s, tp.toDouble / (tp + fp))
+  }
+
+  private def recall(confusionMatrix: List[(String, (Int, Int, Int, Int))]): List[(String, Double)] = {
+    for {
+      (s, (tp, fp, tn, fn)) <- confusionMatrix
+    } yield (s, tp.toDouble / (tp + fn))
+  }
+
   def evaluateModel(model: GenSeq[(String, (String, Double))]): Unit = {
     // @model contains the prediction scores for test users
     // Convert the prediction scores to class labels
@@ -322,9 +334,13 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // Calculate the confusion matrix
     val cm = confusionMatrix(predictions, testLabels, newSongs)
-
+    // Calculate precision = TP / (TP + FP)
+    val p = precision(cm)
+    // Calculate recall = TP / (TP + FN)
+    val r = recall(cm)
     // DEBUG
-    //println(cm)
+    println(p)
+    println(r)
   }
 
 }
