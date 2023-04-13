@@ -290,7 +290,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
    * @return map of list of songs the user will listen predicted by the model for each user
    */
-  private def predictionToClassLabels(model: GenSeq[(String, (String, Double))], threshold: Double = 0.0):Map[String, List[String]] = {
+  private def predictionToClassLabels(model: GenSeq[(String, (String, Double))], threshold: Double = 0.0): Map[String, List[String]] = {
     // @model contains the prediction scores for test users
     val predictions = collection.mutable.Map[String, List[String]]()
     val min = model.map(el => (el._2._2)).min
@@ -303,38 +303,25 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     predictions.toMap
   }
 
-
-  private def confusionMatrix(predictions: Map[String, List[String]], testLabels: Map[String, List[String]], newSongs: List[String]): List[(String, (Int, Int, Int, Int))] = {
-    def singleConfusionMatrix(s: String): (Int, Int, Int, Int) = {
-      val temp = testUsers.iterator.toSeq.map(u => (
-        // True positives
-        if (predictions(u).contains(s) && testLabels(u).contains(s)) 1 else 0,
-        // False positives
-        if (predictions(u).contains(s) && !testLabels(u).contains(s)) 1 else 0,
-        // True negatives
-        if (!predictions(u).contains(s) && !testLabels(u).contains(s)) 1 else 0,
-        // False negatives
-        if (!predictions(u).contains(s) && testLabels(u).contains(s)) 1 else 0
-      )).fold((0, 0, 0, 0)) { (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3, acc._4 + tup._4) }
-      (temp._1, temp._2, temp._3, temp._4)
-    }
-
-    for {
-      s <- newSongs
-    } yield {
-      s -> singleConfusionMatrix(s)
-    }
+  private def confusionMatrix(predictions: Map[String, List[String]], song: String): (Int, Int, Int, Int) = {
+    // NB: if threshold too high, user could not be in predictions!
+    testUsers.map(user => (
+      // True positives
+      if (predictions.contains(user) && predictions(user).contains(song) && testLabels(user).contains(song)) 1 else 0,
+      // False positives
+      if (predictions.contains(user) && predictions(user).contains(song) && !testLabels(user).contains(song)) 1 else 0,
+      // True negatives
+      if ((!predictions.contains(user) || !predictions(user).contains(song)) && !testLabels(user).contains(song)) 1 else 0,
+      // False negatives
+      if ((!predictions.contains(user) || !predictions(user).contains(song)) && testLabels(user).contains(song)) 1 else 0
+    )).fold((0, 0, 0, 0)) { (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3, acc._4 + tup._4) }
   }
 
   /**
    * Calculate precision = TP / (TP + FP)
-   *
-   * @param confusionMatrix
-   * @param threshold
-   * @return
    */
-  private def precision(confusionMatrix: (Int, Int, Int, Int), threshold: Double = 0.0): Double = {
-    if (confusionMatrix._1 + confusionMatrix._2 > threshold)
+  private def precision(confusionMatrix: (Int, Int, Int, Int)): Double = {
+    if (confusionMatrix._1 + confusionMatrix._2 > 0.0)
       confusionMatrix._1.toDouble / (confusionMatrix._1 + confusionMatrix._2)
     else
       0.0
@@ -342,51 +329,43 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   /**
    * Calculate recall = TP / (TP + FN)
-   *
-   * @param confusionMatrix
-   * @param threshold
-   * @return
    */
-  private def recall(confusionMatrix: (Int, Int, Int, Int), threshold: Double = 0.0): Double = {
-    if (confusionMatrix._1 + confusionMatrix._4 > threshold)
+  private def recall(confusionMatrix: (Int, Int, Int, Int)): Double = {
+    if (confusionMatrix._1 + confusionMatrix._4 > 0.0)
       confusionMatrix._1.toDouble / (confusionMatrix._1 + confusionMatrix._4)
     else
       0.0
   }
 
-  private def averagePrecision(confusionMatrix: List[(String, (Int, Int, Int, Int))]):List[(String, Double)] = {
+  private def averagePrecision(model: GenSeq[(String, (String, Double))]): List[(String, Double)] = {
     val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: 1.0 :: Nil
-
-    def singleAveragePrecision(i: Int): Double = {
+    // predictions = (threshold) -> (user -> list of songs)
+    val predictions = for {t <- thresholds} yield {predictionToClassLabels(model, t)}
+    // TODO: evaluate recalls (and eventually precisions) beforehand to spare O(length of thresholds) calls to recall and confusionMatrix
+    def singleAveragePrecision(song: String): Double = {
       thresholds.zipWithIndex.map(t => (
-        if (t._2 == (thresholds.length - 1))
-          (recall(confusionMatrix(i)._2, t._1) - 0.0) * precision(confusionMatrix(i)._2, t._1)
-        else
-          (recall(confusionMatrix(i)._2, t._1) - recall(confusionMatrix(i)._2, thresholds(t._2 + 1))) * precision(confusionMatrix(i)._2, t._1)
+        if (t._2 == (thresholds.length - 1)) {
+          0.0
+        }
+        else if (t._2 == (thresholds.length - 2)) {
+          (recall(confusionMatrix(predictions(t._2), song)) - 0.0) * precision(confusionMatrix(predictions(t._2), song))
+        } else
+          (recall(confusionMatrix(predictions(t._2), song)) - recall(confusionMatrix(predictions(t._2 + 1), song))) * precision(confusionMatrix(predictions(t._2), song))
         )).sum
     }
 
-    for {
-      ((s, _), i) <- confusionMatrix.zipWithIndex
-    } yield {
-      (s, singleAveragePrecision(i))
-    }
+    for {song <- newSongs} yield {(song, singleAveragePrecision(song))}
   }
 
-  private def meanAveragePrecision(confusionMatrix: List[(String, (Int, Int, Int, Int))], newSongs: List[String]): Double = {
-    averagePrecision(confusionMatrix).map(ap => (
+  private def meanAveragePrecision(model: GenSeq[(String, (String, Double))]): Double = {
+    averagePrecision(model).map(ap => (
       ap._2
     )).sum / newSongs.length
   }
 
   def evaluateModel(model: GenSeq[(String, (String, Double))]): Double = {
     // @model contains the prediction scores for test users
-    // Convert the prediction scores to class labels
-    val predictions = predictionToClassLabels(model)
-    // Calculate the confusion matrix
-    val cm = confusionMatrix(predictions, testLabels, newSongs)
-    // Calculate mAP
-    meanAveragePrecision(cm, newSongs)
+    meanAveragePrecision(model.toList)
   }
 
 }

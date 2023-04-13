@@ -21,14 +21,7 @@ object main {
     val musicRecommender: MusicRecommender = new MusicRecommender(train, test, testLabels)
     if (verbose) println("MusicRecommender instanced")
 
-    val userBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Sequential) user-based model")
-    println("mAP: " + MyUtils.time(musicRecommender.evaluateModel(userBasedModel), "(Parallel) user-based model evaluation"))
-
-    val itemBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Sequential) item-based model")
-    println("mAP: " + MyUtils.time(musicRecommender.evaluateModel(itemBasedModel), "(Parallel) item-based model evaluation"))
-
     // calculating models (both sequential and parallel)
-    /*
     val (
       userBasedModel: GenSeq[(String, (String, Double))],
       userBasedModelP: GenSeq[(String, (String, Double))],
@@ -94,6 +87,16 @@ object main {
     musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
 
-     */
+    // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
+    println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel))
+    println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP))
+    println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel))
+    println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP))
+    println("(Sequential) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModel))
+    println("(Parallel) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModelP))
+    println("(Sequential) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModel))
+    println("(Parallel) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModelP))
+    println("(Sequential) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModel))
+    println("(Parallel) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModelP))
   }
 }
