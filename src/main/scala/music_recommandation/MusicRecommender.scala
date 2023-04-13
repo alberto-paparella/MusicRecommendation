@@ -9,7 +9,7 @@ import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
 
-class MusicRecommender(train: BufferedSource, test: BufferedSource) {
+class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, testLabelsFile: BufferedSource) {
 
   /**
    * ******************************************************************************************
@@ -48,8 +48,8 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
   // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
   private val mutSongsToUsersMap = collection.mutable.Map[String, List[String]]()
   // get train and test data from files
-  private val (trainUsers, trainUsersToSongsMap) = extractData(train)
-  private val (testUsers, testUsersToSongsMap) = extractData(test)
+  private val (trainUsers, trainUsersToSongsMap) = extractData(trainFile)
+  private val (testUsers, testUsersToSongsMap) = extractData(testFile)
   // convert mutable to immutable list
   private val songs: List[String] = mutSongs.toList
   // convert mutable to immutable map
@@ -262,6 +262,69 @@ class MusicRecommender(train: BufferedSource, test: BufferedSource) {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
     }) sorted ordering
     model
+  }
+
+  /**
+   * Convert the prediction scores to class labels
+   * @param model the predictions scores for test users
+   * @return map of list of songs the user will listen predicted by the model for each user
+   */
+  private def predictionToClassLabels(model: GenSeq[(String, (String, Double))]):Map[String, List[String]] = {
+    // @model contains the prediction scores for test users
+    val predictions = collection.mutable.Map[String, List[String]]()
+    model foreach (el => {if (el._2._2 > 0.0) predictions.update(el._1, el._2._1 :: predictions.getOrElse(el._1, Nil))})
+    predictions.toMap
+  }
+
+  private def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
+    val testLabels = collection.mutable.Map[String, List[String]]()
+    val newSongs = collection.mutable.Set[String]()
+    // for each split line on "\t"
+    for {
+      line <- in.getLines().toList
+    } yield line split "\t" match {
+      case Array(u, s, _) => {
+        // users are the same as in testUsers, while testLabels could contain new songs
+        newSongs add s
+        // update map
+        testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
+      }
+    }
+    (testLabels.toMap, newSongs.toList)
+  }
+
+  private def confusionMatrix(predictions: Map[String, List[String]], testLabels: Map[String, List[String]], newSongs: List[String]): List[(String, (Int, Int, Int, Int))] = {
+    def singleConfusionMatrix(s: String): (Int, Int, Int, Int) = {
+      val temp = testUsers.iterator.toSeq.map(u => (
+        // True positives
+        if (predictions(u).contains(s) && testLabels(u).contains(s)) 1 else 0,
+        // False positives
+        if (predictions(u).contains(s) && !testLabels(u).contains(s)) 1 else 0,
+        // True negatives
+        if (!predictions(u).contains(s) && !testLabels(u).contains(s)) 1 else 0,
+        // False negatives
+        if (!predictions(u).contains(s) && testLabels(u).contains(s)) 1 else 0
+      )).fold((0, 0, 0, 0)) { (acc, tup) => (acc._1 + tup._1, acc._2 + tup._2, acc._3 + tup._3, acc._4 + tup._4) }
+      (temp._1, temp._2, temp._3, temp._4)
+    }
+
+    for {
+      s <- newSongs
+    } yield {
+      s -> singleConfusionMatrix(s)
+    }
+  }
+
+  def evaluateModel(model: GenSeq[(String, (String, Double))]): Unit = {
+    // @model contains the prediction scores for test users
+    // Convert the prediction scores to class labels
+    val predictions = predictionToClassLabels(model)
+    val (testLabels, newSongs) = importTestLabels(testLabelsFile)
+    // Calculate the confusion matrix
+    val cm = confusionMatrix(predictions, testLabels, newSongs)
+
+    // DEBUG
+    //println(cm)
   }
 
 }

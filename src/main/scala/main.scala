@@ -12,15 +12,20 @@ object main {
     val verbose = true
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_500_10.txt").getPath)
-    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_500_10.txt").getPath)
+    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_100_10.txt").getPath)
+    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_100_10.txt").getPath)
+    def testLabels: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_labels_100_10.txt").getPath)
     if (verbose) println("Loaded files")
 
     // instantiate musicRecommender
-    val musicRecommender: MusicRecommender = new MusicRecommender(train, test)
+    val musicRecommender: MusicRecommender = new MusicRecommender(train, test, testLabels)
     if (verbose) println("MusicRecommender instanced")
 
+    val userBasedModel: GenSeq[(String, (String, Double))] = MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model")
+    musicRecommender.evaluateModel(userBasedModel)
+
     // calculating models (both sequential and parallel)
+    /*
     val (
       userBasedModel: GenSeq[(String, (String, Double))],
       userBasedModelP: GenSeq[(String, (String, Double))],
@@ -85,5 +90,7 @@ object main {
     musicRecommender.writeModelOnFile(aggregationModelP, "models/aggregationModelP.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
+
+     */
   }
 }
