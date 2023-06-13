@@ -85,7 +85,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       for {
         u <- testUsers
         s <- songs
-        if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
       } yield u -> (s, rank(u, s))
   }
 
@@ -94,7 +94,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       for {
         u <- testUsers.iterator.toSeq.par
         s <- songs.iterator.toSeq.par
-        if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
       } yield u -> (s, rank(u, s))
   }
 

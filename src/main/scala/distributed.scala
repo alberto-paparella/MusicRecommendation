@@ -15,7 +15,8 @@ object distributed extends Serializable {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
     // we are printing to a file; therefore, parallelization would not improve performances
     model foreach({
-      case seq: Seq[(String, (String, Double))] => seq foreach (el2 => {
+      case seq: Seq[(String, (String, Double))] =>
+        seq foreach (el2 => {
         out.write(s"${el2._1}\t${el2._2._1}\t${el2._2._2}\n")
       })
       case tuple: (String, (String, Double)) =>
@@ -36,9 +37,9 @@ object distributed extends Serializable {
   def main(args: Array[String]): Unit = {
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile("/media/alberto/5cc4e6c6-e71d-42b1-b6ec-bdfab5eabe1c/unibo/scp/MusicReccomendation/src/main/resources/train_100_10.txt")
-    def test: BufferedSource = Source.fromFile("/media/alberto/5cc4e6c6-e71d-42b1-b6ec-bdfab5eabe1c/unibo/scp/MusicReccomendation/src/main/resources/test_100_10.txt")
-    def testLabelsFile: BufferedSource = Source.fromFile("/media/alberto/5cc4e6c6-e71d-42b1-b6ec-bdfab5eabe1c/unibo/scp/MusicReccomendation/src/main/resources/test_labels_100_10.txt")
+    def train: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/train_100_10.txt")
+    def test: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_100_10.txt")
+    def testLabelsFile: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_labels_100_10.txt")
 
     // instantiate spark context
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
@@ -121,11 +122,13 @@ object distributed extends Serializable {
 
       def getModel(user: String) = {
         // foreach song, calculate the score for the user
+        //songsList.map(s => if (!testUsersToSongsMap(user).contains(s)) user -> (s, rank(user, s)))
         songsList.map(s => user -> (s, rank(user, s)))
       }
 
       def getModel2(song: String) = {
         // foreach song, calculate the score for the user
+        //testUsersList.map(u => if (!testUsersToSongsMap(u).contains(song)) u -> (song, rank(u, song)))
         testUsersList.map(u => u -> (song, rank(u, song)))
       }
 
@@ -172,6 +175,7 @@ object distributed extends Serializable {
       }
     }
 
+    // TODO: fix evaluation_functions for distributed computation (task is not serializable error)
     object evaluation_functions {
       /**
        * Convert the prediction scores to class labels
@@ -195,7 +199,7 @@ object distributed extends Serializable {
 
       def confusionMatrix(predictions: Map[String, List[String]], song: String): (Int, Int, Int, Int) = {
         // NB: if threshold too high, user could not be in predictions!
-        testUsers.map(user => (
+        testUsersList.map(user => (
           // True positives
           if (predictions.contains(user) && predictions(user).contains(song) && testLabels(user).contains(song)) 1 else 0,
           // False positives
@@ -264,19 +268,23 @@ object distributed extends Serializable {
       }
     }
 
-    val ubModel = MyUtils.time({
+    /*
+    val ubModel1 = MyUtils.time({
       // for each user, get user-based ranking
-      val ubModel = testUsers.map(u => ubmFunctions.getModel(u))
+      val ubModel1 = testUsers.map(u => ubmFunctions.getModel(u))
       // save RDD on file
-      ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM")
-      ubModel
+      //ubModel1.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM_500_10")
+      ubModel1.collect()
     }, "(Distributed) user-based")
+     */
+
     val ubModel2 = MyUtils.time({
-      val ubModel = songs.map(s => ubmFunctions.getModel2(s))
-      ubModel.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM2")
-      ubModel
+      val ubModel2 = songs.map(s => ubmFunctions.getModel2(s))
+      //ubModel2.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM2_500_10")
+      ubModel2.collect()
     }, "(Distributed) user-based 2")
 
+    /*
     // TODO: probably we can iterate on users RDD instead of songs RDD (in this case we can delete the latter)
     val ibModel = MyUtils.time({
       // for each song, get item-based ranking
@@ -344,16 +352,20 @@ object distributed extends Serializable {
       scm.saveAsTextFile("DISTRIBUTED_OUTPUT/SCM")
       scm
     }, "(Distributed) stochastic combination model")
+    */
 
-    // writing on files 
-    writeModelOnFile(ubModel.collect(), "models/userBasedModelD.txt")
+    // writing on files
+    //writeModelOnFile(ubModel1, "models/userBasedModelD.txt")
+    //writeModelOnFile(ubModel2, "models/userBasedModelD.txt")
+    /*
     writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
     writeModelOnFile(lcModel.collect(), "models/linearCombinationModelD.txt")
     writeModelOnFile(aModel.collect(), "models/aggregationModelD.txt")
     writeModelOnFile(scModel.collect(), "models/stochasticCombinationModelD.txt")
+     */
 
     // models evaluation
-    evaluation_functions.evaluateModel(ubModel.flatMap(identity).collect())
-
+    //println("(Parallel) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel1.flatten))
+    println("(Parallel) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel2.flatten))
   }
 }

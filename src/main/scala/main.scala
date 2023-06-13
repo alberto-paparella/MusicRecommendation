@@ -12,9 +12,9 @@ object main {
     val verbose = true
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_1000_100.txt").getPath)
-    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_1000_100.txt").getPath)
-    def testLabels: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_labels_1000_100.txt").getPath)
+    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_100_10.txt").getPath)
+    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_100_10.txt").getPath)
+    def testLabels: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_labels_100_10.txt").getPath)
     if (verbose) println("Loaded files")
 
     // instantiate musicRecommender
@@ -23,25 +23,32 @@ object main {
 
     // calculating models (both sequential and parallel)
     val (
-      userBasedModel: GenSeq[(String, (String, Double))],
-      userBasedModelP: GenSeq[(String, (String, Double))],
+      //userBasedModel: GenSeq[(String, (String, Double))],
+      userBasedModelP: GenSeq[(String, (String, Double))]
+      /*
       itemBasedModel: GenSeq[(String, (String, Double))],
       itemBasedModelP: GenSeq[(String, (String, Double))]
+       */
       ) = if (verbose) (
-        MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
+        //MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Parallel) user-based model"),
+        /*
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = false), "(Sequential) item-based model"),
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Parallel) item-based model")
+         */
       ) else (
-        musicRecommender.getUserBasedModel(parallel=false),
+        //musicRecommender.getUserBasedModel(parallel=false),
         musicRecommender.getUserBasedModel(parallel=true),
+        /*
         musicRecommender.getItemBasedModel(parallel = false),
         musicRecommender.getItemBasedModel(parallel = true)
+        */
       )
 
     // saving models to file (both sequential and parallel)
-    musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
+    //musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
     musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
+    /*
     musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
     musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
 
@@ -86,10 +93,13 @@ object main {
     musicRecommender.writeModelOnFile(aggregationModelP, "models/aggregationModelP.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
+    */
 
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
-    println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel))
+    //println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel))
     println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP))
+
+    /*
     println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel))
     println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP))
     println("(Sequential) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModel))
@@ -98,5 +108,6 @@ object main {
     println("(Parallel) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModelP))
     println("(Sequential) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModel))
     println("(Parallel) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModelP))
+    */
   }
 }
