@@ -23,21 +23,21 @@ object main {
 
     // calculating models (both sequential and parallel)
     val (
-      //userBasedModel: GenSeq[(String, (String, Double))],
-      userBasedModelP: GenSeq[(String, (String, Double))]
+      userBasedModel: GenSeq[GenSeq[(String, (String, Double))]],
+      userBasedModelP: GenSeq[GenSeq[(String, (String, Double))]]
       /*
       itemBasedModel: GenSeq[(String, (String, Double))],
       itemBasedModelP: GenSeq[(String, (String, Double))]
        */
       ) = if (verbose) (
-        //MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
+        MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Parallel) user-based model"),
         /*
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = false), "(Sequential) item-based model"),
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Parallel) item-based model")
          */
       ) else (
-        //musicRecommender.getUserBasedModel(parallel=false),
+        musicRecommender.getUserBasedModel(parallel=false),
         musicRecommender.getUserBasedModel(parallel=true),
         /*
         musicRecommender.getItemBasedModel(parallel = false),
@@ -47,7 +47,7 @@ object main {
 
     // saving models to file (both sequential and parallel)
     //musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
-    musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
+    //musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
     /*
     musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
     musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
@@ -96,8 +96,8 @@ object main {
     */
 
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
-    //println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel))
-    println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP))
+    println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel.flatten))
+    println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP.flatten))
 
     /*
     println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel))

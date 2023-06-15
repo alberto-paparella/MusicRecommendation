@@ -81,24 +81,39 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * ******************************************************************************************
    */
 
-  private def getModel(rank: (String, String) => Double): List[(String, (String, Double))] = {
+  private def getModel(rank: (String, String) => Double): List[List[(String, (String, Double))]] = {
+    //testUsers map (u => songs map (s => u -> (s, rank(u, s))))
+    songs map(s => {
       for {
-        u <- testUsers
-        s <- songs
-        //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        u <- testUsers filter (u => !testUsersToSongsMap(u).contains(s))
       } yield u -> (s, rank(u, s))
+    } )
+    /*
+    for {
+      s <- songs
+      u <- testUsers
+      if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+    } yield u -> (s, rank(u, s))
+     */
   }
 
-  private def getModelP(rank: (String, String) => Double): ParSeq[(String, (String, Double))] = {
-    // Main parallelization happens here
+  private def getModelP(rank: (String, String) => Double): ParSeq[ParSeq[(String, (String, Double))]] = {
+    //songs.iterator.toSeq.par map (s => testUsers map (u => u -> (s, rank(u, s))))
+    songs.iterator.toSeq.par map (s => {
       for {
-        u <- testUsers.iterator.toSeq.par
-        s <- songs.iterator.toSeq.par
-        //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+        u <- testUsers.iterator.toSeq.par filter (u => !testUsersToSongsMap(u).contains(s))
       } yield u -> (s, rank(u, s))
+    })
+    /*
+    for {
+      s <- songs.iterator.toSeq.par
+      u <- testUsers.iterator.toSeq.par //filter (u => !testUsersToSongsMap(u).contains(s))
+      //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+    } yield u -> (s, rank(u, s))
+    */
   }
 
-  def getUserBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))]  = {
+  def getUserBasedModel(parallel: Boolean = false): GenSeq[GenSeq[(String, (String, Double))]]  = {
     // it calculates the cosine similarity between two users
     def cosineSimilarity(user1: String, user2: String): Double = {
       val numerator = songs.iterator.toSeq.map(song =>
@@ -112,8 +127,10 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
     def rank(user: String, song: String): Double = {
       for {
-        u2 <- trainUsers
-        if u2 != user && trainUsersToSongsMap(u2).contains(song)
+        // Here parallelization would probably improve just for very large scaled computation
+        u2 <- trainUsers//.iterator.toSeq.par
+        //if u2 != user && trainUsersToSongsMap(u2).contains(song)
+        if trainUsersToSongsMap(u2).contains(song)  // u2 is from testUsers, therefore is always != user
       } yield {
         cosineSimilarity(user, u2)
       }
@@ -126,7 +143,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       getModel(rank)
   }
 
-  def getItemBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
+  def getItemBasedModel(parallel: Boolean = false): GenSeq[GenSeq[(String, (String, Double))]] = {
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
       // Here, parallelization does not improve performances (TODO: check)
