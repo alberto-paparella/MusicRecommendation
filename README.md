@@ -47,3 +47,82 @@ We plan to implement the following algorithms:
    1. Selecting the created cluster
    2. Choosing *Spark* job  as "Type of job"
    3. Typing `gs://mr/package.jar` in "Main class or jar" 
+
+# Some notes about some choices make during the project
+
+## getModel alternatives:
+
+- using only map:
+
+```
+songs.map(s => if (!testUsersToSongsMap(user).contains(s)) user -> (s, rank(user, s)) else user -> (s, 0.0))
+```
+
+- using external map and internal for:
+
+```
+songs map (s => {
+  for {
+    u <- testUsers filter (u => !testUsersToSongsMap(u).contains(s))
+  } yield u -> (s, rank(u, s))
+})
+```
+
+- using only for:
+
+```
+for {
+  s <- songs
+  u <- testUsers
+  if !testUsersToSongsMap(u).contains(s)
+} yield u -> (s, rank(u, s))
+```
+
+The latter has been (sperimentally) proven to be the most efficient for both sequential and parallel computations, while in the distributed version the second works better, as we can distribute only on one RDD (more considerations on this later).
+
+- Parallel version of the third alternative:
+
+```
+for {
+  s <- songs.iterator.toSeq.par
+  u <- testUsers.iterator.toSeq.par
+  if !testUsersToSongsMap(u).contains(s)
+} yield u -> (s, rank(u, s))
+```
+
+In the for construct over both structures, the if statement has been proven to work better than the filter, differently from the other cases (i.e., for over one single structure and map).
+
+- Distributed version of the second alternative:
+
+```
+object _BasedModel {
+
+  ...
+
+  def getRanks1(user: String):ParSeq[(String, (String, Double))] = {
+    // foreach song, calculate the score for the user
+    for {
+      song <- songs.iterator.toSeq.par filter (song => !testUsersToSongsMap(user).contains(song))
+    } yield {
+      user -> (song, rank(user, song))
+    }
+  }
+
+  def getRanks2(song: String): ParSeq[(String, (String, Double))] = {
+    // foreach user, calculate the score for the user
+    for {
+      user <- testUsers.iterator.toSeq.par filter (user => !testUsersToSongsMap(user).contains(song))
+    } yield {
+      user -> (song, rank(user, song))
+    }
+  }
+}
+
+...
+
+ctx.parallelize(testUsers).map(user => _BasedModel.getRanks1(user).seq).collect.flatten
+ctx.parallelize(songs).map(song => _BasedModel.getRanks2(song).seq).collect.flatten
+
+```
+
+About distribution, we also have to take in account the number of nodes and cores per node that we can use. For instance, in our case dividing the computation over the songs has proven to be better than dividing over the number of users in all the experiments, therefore if we had more nodes than cores per node we would distribute over the songs mapping them over the getRanks2 function; otherwise, if we had more cores per node rather than nodes, we would distribute over the users mapping them over the getRanks1 function and making use of the greater parallelization happening inside every single node. The same valuations stand in case for some reason the number of users grows exponentially while the number of songs stays the same.

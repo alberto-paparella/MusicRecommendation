@@ -24,33 +24,26 @@ object main {
     // calculating models (both sequential and parallel)
     val (
       userBasedModel: GenSeq[GenSeq[(String, (String, Double))]],
-      userBasedModelP: GenSeq[GenSeq[(String, (String, Double))]]
-      /*
-      itemBasedModel: GenSeq[(String, (String, Double))],
-      itemBasedModelP: GenSeq[(String, (String, Double))]
-       */
+      userBasedModelP: GenSeq[GenSeq[(String, (String, Double))]],
+      itemBasedModel: GenSeq[GenSeq[(String, (String, Double))]],
+      itemBasedModelP: GenSeq[GenSeq[(String, (String, Double))]]
       ) = if (verbose) (
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Parallel) user-based model"),
-        /*
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = false), "(Sequential) item-based model"),
         MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Parallel) item-based model")
-         */
       ) else (
         musicRecommender.getUserBasedModel(parallel=false),
         musicRecommender.getUserBasedModel(parallel=true),
-        /*
         musicRecommender.getItemBasedModel(parallel = false),
         musicRecommender.getItemBasedModel(parallel = true)
-        */
       )
 
     // saving models to file (both sequential and parallel)
-    //musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
-    //musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
-    /*
-    musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
-    musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
+    musicRecommender.writeModelOnFile(userBasedModel.flatten, "models/userBasedModel.txt")
+    musicRecommender.writeModelOnFile(userBasedModelP.flatten, "models/userBasedModelP.txt")
+    musicRecommender.writeModelOnFile(itemBasedModel.flatten, "models/itemBasedModel.txt")
+    musicRecommender.writeModelOnFile(itemBasedModelP.flatten, "models/itemBasedModelP.txt")
 
     // importing models from file (in case you wanna skip/separate execution wrt ubm and ibm
     val ubm = musicRecommender.importModelFromFile("models/userBasedModel.txt")
@@ -93,21 +86,17 @@ object main {
     musicRecommender.writeModelOnFile(aggregationModelP, "models/aggregationModelP.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
     musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
-    */
 
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
     println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel.flatten))
     println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP.flatten))
-
-    /*
-    println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel))
-    println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP))
+    println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel.flatten))
+    println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP.flatten))
     println("(Sequential) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModel))
     println("(Parallel) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModelP))
     println("(Sequential) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModel))
     println("(Parallel) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModelP))
     println("(Sequential) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModel))
     println("(Parallel) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModelP))
-    */
   }
 }
