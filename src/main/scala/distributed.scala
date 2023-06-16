@@ -39,9 +39,9 @@ object distributed extends Serializable {
   def main(args: Array[String]): Unit = {
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/train_100_10.txt")
-    def test: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_100_10.txt")
-    def testLabelsFile: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_labels_100_10.txt")
+    def train: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/train_100_50.txt")
+    def test: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_100_50.txt")
+    def testLabelsFile: BufferedSource = Source.fromFile("/home/alberto/Desktop/scp/MusicReccomendation/src/main/resources/test_labels_100_50.txt")
 
     // instantiate spark context
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
@@ -219,6 +219,26 @@ object distributed extends Serializable {
           user -> (s, rank(user, s))
         }
       }
+
+      def getModel3(song: String): ParSeq[(String, (String, Double))] = {
+        // foreach song, calculate the score for the user
+        //testUsersList.map(u => u -> (song, rank(u, song)))
+        for {
+          user <- testUsersList.iterator.toSeq.par filter (user => !testUsersToSongsMap(user).contains(song))
+        } yield {
+          user -> (song, rank(user, song))
+        }
+      }
+
+      def getModel4(user: String): ParSeq[(String, (String, Double))] = {
+        // foreach song, calculate the score for the user
+        //songsList.map(s => user -> (s, rank(user, s)))
+        for {
+          s <- songsList.iterator.toSeq.par filter (s => !testUsersToSongsMap(user).contains(s))
+        } yield {
+          user -> (s, rank(user, s))
+        }
+      }
     }
 
     object evaluation_functions {
@@ -309,6 +329,7 @@ object distributed extends Serializable {
       }
     }
 
+    /*
     val ubModel1 = MyUtils.time({
       // for each user, get user-based ranking
       val ubModel1 = testUsers.map(u => ubmFunctions.getModel(u))
@@ -336,9 +357,8 @@ object distributed extends Serializable {
       //ubModel2.saveAsTextFile("DISTRIBUTED_OUTPUT/UBM2_500_10")
       ubModel.collect()
     }, "(Distributed) user-based 4")
+     */
 
-    /*
-    // TODO: probably we can iterate on users RDD instead of songs RDD (in this case we can delete the latter)
     val ibModel1 = MyUtils.time({
       // for each song, get item-based ranking
       val ibModel = songs.map(s => ibmFunctions.getModel(s))
@@ -346,12 +366,23 @@ object distributed extends Serializable {
       ibModel.collect()
     }, "(Distributed) item-based 1")
     val ibModel2 = MyUtils.time({
-      // for each song, get item-based ranking
+      // for each user, get item-based ranking
       val ibModel = testUsers.map(u => ibmFunctions.getModel2(u))
       //ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM2")
       ibModel.collect()
     }, "(Distributed) item-based 2")
-     */
+    val ibModel3 = MyUtils.time({
+      // for each song, get item-based ranking
+      val ibModel = songs.map(s => ibmFunctions.getModel3(s).seq)
+      //ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM3")
+      ibModel.collect()
+    }, "(Distributed) item-based 3")
+    val ibModel4 = MyUtils.time({
+      // for each user, get item-based ranking
+      val ibModel = testUsers.map(u => ibmFunctions.getModel4(u).seq)
+      //ibModel.saveAsTextFile("DISTRIBUTED_OUTPUT/IBM4")
+      ibModel.collect()
+    }, "(Distributed) item-based 4")
 
     /*
     val lcAlpha = 0.5
@@ -410,9 +441,8 @@ object distributed extends Serializable {
     */
 
     // writing on files
-    //writeModelOnFile(ubModel1, "models/userBasedModelD.txt")
-    //writeModelOnFile(ubModel2, "models/userBasedModelD.txt")
     /*
+    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
     writeModelOnFile(ibModel.collect(), "models/itemBasedModelD.txt")
     writeModelOnFile(lcModel.collect(), "models/linearCombinationModelD.txt")
     writeModelOnFile(aModel.collect(), "models/aggregationModelD.txt")
@@ -420,11 +450,13 @@ object distributed extends Serializable {
      */
 
     // models evaluation
-    println("(Distributed 1) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel1.flatten))
-    println("(Distributed 2) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel2.flatten))
-    println("(Distributed 3) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel3.flatten))
-    println("(Distributed 4) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel4.flatten))
-    //println("(Distributed 1) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel1.flatten))
-    //println("(Distributed 2) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel2.flatten))
+    //println("(Distributed 1) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel1.flatten))
+    //println("(Distributed 2) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel2.flatten))
+    //println("(Distributed 3) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel3.flatten))
+    //println("(Distributed 4) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel4.flatten))
+    println("(Distributed 1) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel1.flatten))
+    println("(Distributed 2) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel2.flatten))
+    println("(Distributed 3) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel3.flatten))
+    println("(Distributed 4) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel4.flatten))
   }
 }
