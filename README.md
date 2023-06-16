@@ -48,9 +48,9 @@ We plan to implement the following algorithms:
    2. Choosing *Spark* job  as "Type of job"
    3. Typing `gs://mr/package.jar` in "Main class or jar" 
 
-# Some notes about some choices make during the project
+## Some notes about some choices made during the project
 
-## getModel alternatives:
+### getModel alternatives:
 
 - using only map:
 
