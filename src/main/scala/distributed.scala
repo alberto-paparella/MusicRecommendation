@@ -105,6 +105,7 @@ object distributed extends Serializable  {
 
     // validation data (import just once at initialization)
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
+    // parallelized here because SparkContext cannot be serialized (e.g. inside averagePrecision function)
     val newSongsRdd = ctx.parallelize(newSongs)
     object UserBasedModel {
       // calculate the cosine similarity between two users
@@ -266,7 +267,7 @@ object distributed extends Serializable  {
       }
 
       def meanAveragePrecision(model: Array[(String, (String, Double))]): Double = {
-        averagePrecision(model).map(ap => ap._2).sum / newSongs.length
+        averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
       }
 
       def evaluateModel(model: Array[(String, (String, Double))]): Double = {
@@ -314,6 +315,13 @@ object distributed extends Serializable  {
     val ubm = ubModel sorted ordering
     val ibm = ibModel sorted ordering
 
+    /**
+     * Calculate linear combination model given ubm model, ibm model and an alpha parameter
+     * @param ubmModel
+     * @param ibmModel
+     * @param lcAlpha weight of the contribute of the two models
+     * @return
+     */
     def getLinearCombinationModel(ubmModel: Array[(String, (String, Double))],
                                   ibmModel: Array[(String, (String, Double))],
                                   lcAlpha: Double = 0.5): Array[(String, (String, Double))] = {
@@ -329,6 +337,13 @@ object distributed extends Serializable  {
 
     val lcModel = MyUtils.time(getLinearCombinationModel(ubm, ibm), "(Distributed) linear combination")
 
+    /**
+     * Calculate aggregation model given
+     * @param ubmModel
+     * @param ibmModel
+     * @param itemBasedPercentage how many ranks are taken from ubm and ibm
+     * @return
+     */
     def getAggregationModel(ubmModel: Array[(String, (String, Double))],
                             ibmModel: Array[(String, (String, Double))],
                             itemBasedPercentage: Double = 0.5): Array[(String, (String, Double))] = {
@@ -350,22 +365,29 @@ object distributed extends Serializable  {
 
     val aModel = MyUtils.time(getAggregationModel(ubm, ibm), "(Distributed) aggregation model")
 
-    val itemBasedProbability = 0.5
-    val scModel = MyUtils.time({
+    /**
+     * Calculate stochastic model given
+     * @param ubmModel
+     * @param ibmModel
+     * @param itemBasedProbability threshold over which ranks are chosen from ibm model
+     * @return
+     */
+    def getStochasticModel(ubmModel: Array[(String, (String, Double))],
+                            ibmModel: Array[(String, (String, Double))],
+                           itemBasedProbability: Double = 0.5): Array[(String, (String, Double))] = {
       val random = new Random
       // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-      val modelsPair = ctx.parallelize(ubm.zip(ibm))
-      val scm = modelsPair.map({
+      ctx.parallelize(ubmModel.zip(ibmModel)) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
           // based on the probability, take the rank of one model
           if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
           else (user1, (song1, rank1))
-      })
-      //scm.saveAsTextFile("DISTRIBUTED_OUTPUT/SCM")
-      scm.collect()
-    }, "(Distributed) stochastic combination model")
+      } collect()
+    }
+
+    val scModel = MyUtils.time(getStochasticModel(ubm, ibm), "(Distributed) stochastic combination model")
 
     // writing on files
 //    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
