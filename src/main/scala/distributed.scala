@@ -57,7 +57,7 @@ object distributed extends Serializable  {
     val verbose = true
 
     def trainUsersN: Integer = 100
-    def testUsersN: Integer = 10
+    def testUsersN: Integer = 100
 
     // import train and test datasets
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
@@ -137,6 +137,8 @@ object distributed extends Serializable  {
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // parallelized here because SparkContext cannot be serialized (e.g. inside averagePrecision function)
     val newSongsRdd = ctx.parallelize(newSongs)
+
+    if (verbose) println("New songs: " + newSongs.length)
 
     /**
      * ******************************************************************************************

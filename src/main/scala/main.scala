@@ -94,15 +94,15 @@ object main {
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
     val mAP = (
       MyUtils.time(musicRecommender.evaluateModel(userBasedModel),"(Sequential) user-based model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(userBasedModelP),"(Parallel) user-based model mAP"),
+      MyUtils.time(musicRecommender.evaluateModel(userBasedModelP, parallel=true),"(Parallel) user-based model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(itemBasedModel),"(Sequential) item-based model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(itemBasedModelP),"(Parallel) item-based model mAP"),
+      MyUtils.time(musicRecommender.evaluateModel(itemBasedModelP, parallel=true),"(Parallel) item-based model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(linearCombinationModel),"(Sequential) linear-combination model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(linearCombinationModelP),"(Parallel) linear-combination model mAP"),
+      MyUtils.time(musicRecommender.evaluateModel(linearCombinationModelP, parallel=true),"(Parallel) linear-combination model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(aggregationModel),"(Sequential) aggregation model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(aggregationModelP),"(Parallel) aggregation model mAP"),
+      MyUtils.time(musicRecommender.evaluateModel(aggregationModelP, parallel=true),"(Parallel) aggregation model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModel),"(Sequential) stochastic-combination model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModelP),"(Parallel) stochastic-combination model mAP"))
+      MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModelP, parallel=true),"(Parallel) stochastic-combination model mAP"))
     println("(Sequential) user-based model mAP: " + mAP._1)
     println("(Parallel) user-based model mAP: " + mAP._2)
     println("(Sequential) item-based model mAP: " + mAP._3)

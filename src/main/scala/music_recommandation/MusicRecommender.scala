@@ -447,9 +447,10 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * Calculate the average precision of the model for each class (i.e., each song)
    *
    * @param model the model to be evaluated
+   * @param parallel specify if the computation should be parallelized or not
    * @return a list containing the average precisions for each class (i.e., each song)
    */
-  private def averagePrecision(model: GenSeq[(String, (String, Double))]): List[(String, Double)] = {
+  private def averagePrecision(model: GenSeq[(String, (String, Double))], parallel: Boolean): GenSeq[(String, Double)] = {
     // the thresholds at which a rank is considered to be positive or negative (_ <= t == 0, _ > t == 1)
     val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: Nil
     // predictions = (threshold) -> (user -> list of songs)
@@ -473,28 +474,33 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
         ).sum
     }
 
-    for {song <- newSongs} yield {(song, singleAveragePrecision(song))}
+    if (parallel)
+      for {song <- newSongs.iterator.toSeq.par} yield {(song, singleAveragePrecision(song))}
+    else
+      for {song <- newSongs} yield {(song, singleAveragePrecision(song))}
   }
 
   /**
    * Calculate the mean Average Precision (mAP) of the given model
    *
    * @param model the model to be evaluated
+   * @param parallel specify if the computation should be parallelized or not
    * @return the mAP of the model
    */
-  private def meanAveragePrecision(model: GenSeq[(String, (String, Double))]): Double = {
-    averagePrecision(model).map(ap => ap._2).sum / newSongs.length
+  private def meanAveragePrecision(model: GenSeq[(String, (String, Double))], parallel: Boolean): Double = {
+    averagePrecision(model, parallel).map(ap => ap._2).sum / newSongs.length
   }
 
   /**
    * Evaluate the model using mAP
    *
    * @param model the model to be evaluated
+   * @param parallel specify if the computation should be parallelized or not
    * @return the mAP of the model
    */
-  def evaluateModel(model: GenSeq[(String, (String, Double))]): Double = {
+  def evaluateModel(model: GenSeq[(String, (String, Double))], parallel: Boolean = false): Double = {
     // model contains the prediction scores for test users
-    meanAveragePrecision(model.toList)
+    meanAveragePrecision(model.toList, parallel)
   }
 
 }
