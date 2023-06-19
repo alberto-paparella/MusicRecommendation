@@ -11,10 +11,14 @@ object main {
     // verbosity of the output (true = debugging, false = execution)
     val verbose = true
 
+    def trainUsersN: Integer = 100
+    def testUsersN: Integer = 10
+
     // import train and test datasets
-    def train: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("train_100_10.txt").getPath)
-    def test: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_100_10.txt").getPath)
-    def testLabels: BufferedSource = Source.fromFile(getClass.getClassLoader.getResource("test_labels_100_10.txt").getPath)
+    def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_${testUsersN}.txt")
+    def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_${testUsersN}.txt")
+    def testLabels: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_${testUsersN}.txt")
+
     if (verbose) println("Loaded files")
 
     // instantiate musicRecommender
