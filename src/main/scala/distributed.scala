@@ -559,10 +559,16 @@ object distributed extends Serializable  {
      */
 
     // evaluating models; mAP should be the same wrt seq and par models
-    println("(Distributed) user-based model mAP: " + EvaluationFunctions.evaluateModel(ubModel))
-    println("(Distributed) item-based model mAP: " + EvaluationFunctions.evaluateModel(ibModel))
-    println("(Distributed) linear-combination model mAP: " + EvaluationFunctions.evaluateModel(lcModel))
-    println("(Distributed) aggregation model mAP: " + EvaluationFunctions.evaluateModel(aModel))
-    println("(Distributed) stochastic model mAP: " + EvaluationFunctions.evaluateModel(scModel))
+    val mAP = (
+      MyUtils.time(EvaluationFunctions.evaluateModel(ubModel), "(Distributed) user-based model mAP"),
+      MyUtils.time(EvaluationFunctions.evaluateModel(ibModel), "(Distributed) item-based model mAP"),
+      MyUtils.time(EvaluationFunctions.evaluateModel(lcModel), "(Distributed) linear-combination model mAP"),
+      MyUtils.time(EvaluationFunctions.evaluateModel(aModel),  "(Distributed) aggregation model mAP"),
+      MyUtils.time(EvaluationFunctions.evaluateModel(scModel), "(Distributed) stochastic-combination model mAP"))
+    println("(Distributed) user-based model mAP: " + mAP._1)
+    println("(Distributed) item-based model mAP: " + mAP._2)
+    println("(Distributed) linear-combination model mAP: " + mAP._3)
+    println("(Distributed) aggregation model model mAP: " + mAP._4)
+    println("(Distributed) stochastic-combination model mAP: " + mAP._5)
   }
 }
