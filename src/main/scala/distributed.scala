@@ -1,17 +1,16 @@
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
+import my_utils.MyUtils
 
 import java.io.{PrintWriter, Serializable}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
-import my_utils.MyUtils
-
-import scala.collection.GenSeq
 import scala.collection.parallel.ParSeq
 
 object distributed extends Serializable  {
+
 
   def writeModelOnFile[T](model: Array[T], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
@@ -38,6 +37,9 @@ object distributed extends Serializable  {
   }
   def main(args: Array[String]): Unit = {
 
+    // verbosity of the output (true = debugging, false = execution)
+    val verbose = true
+
     def trainUsersN: Integer = 100
     def testUsersN: Integer = 10
 
@@ -45,6 +47,8 @@ object distributed extends Serializable  {
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_${testUsersN}.txt")
     def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_${testUsersN}.txt")
     def testLabelsFile: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_${testUsersN}.txt")
+
+    if (verbose) println("Loaded files")
 
     // instantiate spark context
     val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
@@ -55,6 +59,11 @@ object distributed extends Serializable  {
     // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
     val mutSongsToUsersMap = collection.mutable.Map[String, List[String]]()
 
+    /**
+     * Read file containing the data storing them in their relative structures
+     * @param in file containing the data
+     * @return list of users in the file and map of list of songs for each user
+     */
     def extractData(in: BufferedSource): (Seq[String], Map[String, List[String]]) = {
       // all users in file
       val usersInFile = collection.mutable.Set[String]()
@@ -64,14 +73,13 @@ object distributed extends Serializable  {
       for {
         line <- in.getLines().toList
       } yield line split "\t" match {
-        case Array(u, s, _) => {
+        case Array(u, s, _) =>
           // add user and song
           usersInFile add u
           mutSongs add s
           // update maps
           usersToSongsMap.update(u, s :: usersToSongsMap.getOrElse(u, Nil))
           mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
-        }
       }
       (usersInFile.toSeq, usersToSongsMap.toMap)
     }
@@ -84,8 +92,13 @@ object distributed extends Serializable  {
     // convert mutable to immutable map
     val songsToUsersMap = mutSongsToUsersMap.toMap
 
-    println("Songs: " + songs.length)
+    if (verbose) println("Songs: " + songs.length)
 
+    /**
+     * Import data from the test labels file used for evaluation
+     * @param in file containing the test labels data
+     * @return a map representing for each test user the latter half of its music history (i.e., the ground truth)
+     */
     def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
       val testLabels = collection.mutable.Map[String, List[String]]()
       val newSongs = collection.mutable.Set[String]()
@@ -191,7 +204,6 @@ object distributed extends Serializable  {
     object evaluation_functions extends Serializable {
       /**
        * Convert the prediction scores to class labels
-       *
        * @param model     the predictions scores for test users
        * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
        * @return map of list of songs the user will listen predicted by the model for each user
@@ -250,7 +262,6 @@ object distributed extends Serializable  {
           predictionToClassLabels(model, t)
         }
 
-        // TODO: evaluate recalls (and eventually precisions) beforehand to spare O(length of thresholds) calls to recall and confusionMatrix
         def singleAveragePrecision(song: String): Double = {
           thresholds.zipWithIndex.map(t =>
             if (t._2 == (thresholds.length - 1)) {

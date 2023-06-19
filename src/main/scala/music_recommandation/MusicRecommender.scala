@@ -19,6 +19,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   /**
    * Read file containing the data storing them in their relative structures
+   *
    * @param in file containing the data
    * @return list of users in the file and map of list of songs for each user
    */
@@ -31,14 +32,13 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     for {
       line <- in.getLines().toList
     } yield line split "\t" match {
-      case Array(u, s, _) => {
+      case Array(u, s, _) =>
         // add user and song
         usersInFile add u
         mutSongs add s
         // update maps
         usersToSongsMap.update(u, s :: usersToSongsMap.getOrElse(u, Nil))
         mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
-      }
     }
     (usersInFile.toList, usersToSongsMap.toMap)
   }
@@ -55,6 +55,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   // convert mutable to immutable map
   private val songsToUsersMap = mutSongsToUsersMap.toMap
 
+  /**
+   * Import data from the test labels file used for evaluation
+   *
+   * @param in file containing the test labels data
+   * @return a map representing for each test user the latter half of its music history (i.e., the ground truth)
+   */
   private def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
     val testLabels = collection.mutable.Map[String, List[String]]()
     val newSongs = collection.mutable.Set[String]()
@@ -62,12 +68,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     for {
       line <- in.getLines().toList
     } yield line split "\t" match {
-      case Array(u, s, _) => {
+      case Array(u, s, _) =>
         // users are the same as in testUsers, while testLabels could contain new songs
         newSongs add s
         // update map
         testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
-      }
     }
     (testLabels.toMap, newSongs.toList)
   }
@@ -81,83 +86,108 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * ******************************************************************************************
    */
 
-  private def getModel(rank: (String, String) => Double): List[List[(String, (String, Double))]] = {
-    //testUsers map (u => songs map (s => u -> (s, rank(u, s))))
-    songs map(s => {
-      for {
-        u <- testUsers filter (u => !testUsersToSongsMap(u).contains(s))
-      } yield u -> (s, rank(u, s))
-    } )
-    /*
+  /**
+   * (Sequential version) Given a rank function, it evaluates the ranks for combination (user, song)
+   *
+   * @param rank a function to evaluate the rank of each song for each user
+   * @return the ranks for each song for each user according to the specified rank function
+   */
+  private def getModel(rank: (String, String) => Double): List[(String, (String, Double))] = {
     for {
       s <- songs
       u <- testUsers
       if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
     } yield u -> (s, rank(u, s))
-     */
   }
 
-  private def getModelP(rank: (String, String) => Double): ParSeq[ParSeq[(String, (String, Double))]] = {
-    //songs.iterator.toSeq.par map (s => testUsers map (u => u -> (s, rank(u, s))))
-    songs.iterator.toSeq.par map (s => {
-      for {
-        u <- testUsers.iterator.toSeq.par filter (u => !testUsersToSongsMap(u).contains(s))
-      } yield u -> (s, rank(u, s))
-    })
-    /*
+  /**
+   * (Parallel version) Given a rank function, it evaluates the ranks for combination (user, song)
+   *
+   * @param rank a function to evaluate the rank of each song for each user
+   * @return the ranks for each song for each user according to the specified rank function
+   */
+  private def getModelP(rank: (String, String) => Double): ParSeq[(String, (String, Double))] = {
     for {
       s <- songs.iterator.toSeq.par
-      u <- testUsers.iterator.toSeq.par //filter (u => !testUsersToSongsMap(u).contains(s))
-      //if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
+      u <- testUsers.iterator.toSeq.par
+      if !testUsersToSongsMap(u).contains(s) // considering only songs the user hasn't listened to yet
     } yield u -> (s, rank(u, s))
-    */
   }
 
-  def getUserBasedModel(parallel: Boolean = false): GenSeq[GenSeq[(String, (String, Double))]]  = {
-    // it calculates the cosine similarity between two users
+  /**
+   * Get the user based model (i.e., using the cosine similarity between two users as rank function)
+   *
+   * @param parallel specify if the computation should be parallelized or not
+   * @return the user based model
+   */
+  def getUserBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))]  = {
+    /**
+     * Get the cosine similarity between two users
+     *
+     * @param user1 the first user (presumably from test users)
+     * @param user2 the second user (presumably from trains users)
+     * @return the cosine similarity between the two users
+     */
     def cosineSimilarity(user1: String, user2: String): Double = {
+      // number of songs listened by both users
       val numerator = songs.iterator.toSeq.map(song =>
         // if both users listened to song return 1, else 0
         if (testUsersToSongsMap(user1).contains(song) && trainUsersToSongsMap(user2).contains(song)) 1 else 0
       ).sum
-      // usersToSongMap(user).length represents how many songs the user listened to
+      // _usersToSongMap(user).length represents how many songs the user listened to
       val denominator = sqrt(testUsersToSongsMap(user1).length) * sqrt(trainUsersToSongsMap(user2).length)
       if (denominator != 0) numerator / denominator else 0.0
     }
 
+    /**
+     * Calculate the rank for each song for each user (i.e., the sum of the cosine similarities with the users in train
+     * users who listened to the song)
+     *
+     * @param user the user
+     * @param song the song
+     * @return the rank for each song for user
+     */
     def rank(user: String, song: String): Double = {
       for {
-        // Here parallelization would probably improve just for very large scaled computation
-        u2 <- trainUsers//.iterator.toSeq.par
-        //if u2 != user && trainUsersToSongsMap(u2).contains(song)
-        if trainUsersToSongsMap(u2).contains(song)  // u2 is from testUsers, therefore is always != user
+        u2 <- trainUsers
+        if trainUsersToSongsMap(u2).contains(song)
       } yield {
         cosineSimilarity(user, u2)
       }
     } sum
 
-    // Calculate model
-    if (parallel)
-      getModelP(rank)
-    else
-      getModel(rank)
+    // calculate model
+    if (parallel) getModelP(rank) else getModel(rank)
   }
 
-  def getItemBasedModel(parallel: Boolean = false): GenSeq[GenSeq[(String, (String, Double))]] = {
+  /**
+   * Get the item based model (i.e., using the cosine similarity between two songs as rank function)
+   *
+   * @param parallel specify if the computation should be parallelized or not
+   * @return the user item model
+   */
+  def getItemBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
     // it calculates the cosine similarity between two songs
     def cosineSimilarity(song1: String, song2: String): Double = {
-      // Here, parallelization does not improve performances (TODO: check)
+      // number of users who listened to both songs
       val numerator = trainUsers.iterator.map(user =>
           // if the user listened to both songs return 1, else 0
           if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0
       ).sum
-      // pre-calculate denominator to catch if it is equal to 0
+      // songsToUsersMap(song).length represents hoe many users listened to the song
       val denominator = sqrt(songsToUsersMap(song1).length) * sqrt(songsToUsersMap(song2).length)
       if (denominator != 0) numerator / denominator else 0
     }
 
+    /**
+     * Calculate the rank for each song for each user (i.e., the sum of the cosine similarities of the songs listened by
+     * the user with the other songs)
+     *
+     * @param user the user
+     * @param song the song
+     * @return the rank for each song for user
+     */
     def rank(user: String, song: String): Double = {
-      // Here, parallelization does not improve performances (TODO: check)
       for {
         s2 <- songs
         if s2 != song
@@ -167,13 +197,19 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       }
     } sum
 
-    // Calculate model
-    if (parallel)
-      getModelP(rank)
-    else
-      getModel(rank)
+    // calculate model
+    if (parallel) getModelP(rank) else getModel(rank)
   }
 
+  /**
+   * Calculate linear combination model given the user and the item based models and an alpha parameter
+   *
+   * @param ubm      the user based model
+   * @param ibm      the item based model
+   * @param alpha    weight of the contribute of the user based model; ibm will be weighted accordingly (lcAlpha - 1)
+   * @param parallel specify if the computation should be parallelized or not
+   * @return the linear combination model
+   */
   def getLinearCombinationModel(ubm: List[(String, String, Double)],
                                 ibm: List[(String, String, Double)],
                                 alpha: Double,
@@ -184,7 +220,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       ubm.zip(ibm).par.map({
         // for each pair
         case ((user1, song1, rank1), (user2, song2, rank2)) =>
-          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // Catch error during zip
+          if ((user1 != user2) || (song1 != song2)) System.exit(2)
           // return (user, song, ranks linear combination)
           (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
       })
@@ -201,26 +238,36 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
-  def getAggregationModel(ubm: List[(String, String, Double)], ibm: List[(String, String, Double)],
+  /**
+   * Calculate aggregation model given the user and the item based models and an itemBasedPercentage parameter
+   *
+   * @param ubm                 the user based model
+   * @param ibm                 the item based model
+   * @param itemBasedPercentage how many ranks are taken from ubm and ibm
+   * @param parallel            specify if the computation should be parallelized or not
+   * @return the aggregation model
+   */
+  def getAggregationModel(ubm: List[(String, String, Double)],
+                          ibm: List[(String, String, Double)],
                           itemBasedPercentage: Double = 0.5,
                           parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
 
-    // Exit if percentage is not in the range 0 <= p <= 1
+    // exit if percentage is not in the range 0 <= p <= 1
     if (itemBasedPercentage < 0 || itemBasedPercentage > 1) {
-      System.err.println("Percentage must be between 0 and 1\n");
-      System.exit(-1);
+      System.err.println("Percentage must be between 0 and 1\n")
+      System.exit(-1)
     }
 
     if (parallel) {
       val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-      // TODO: find a better solution than zipWithIndex (may be a slow solution)
       ubm.zip(ibm).zipWithIndex.par.map({
         // for each pair
         case (couple, index) => couple match {
           case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+            // catch error during zip
+            if ((user1 != user2) || (song1 != song2)) System.exit(2)
             // based on the percentage, take the rank of one model
             if (index < itemBasedThreshold) (user1, (song1, rank2))
             else (user1, (song1, rank1));
@@ -230,12 +277,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-      // TODO: find a better solution than zipWithIndex (may be a slow solution)
       ubm.zip(ibm).zipWithIndex.map({
         // for each pair
         case (couple, index) => couple match {
           case ((user1, song1, rank1), (user2, song2, rank2)) =>
-            if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+            // catch error during zip
+            if ((user1 != user2) || (song1 != song2)) System.exit(2)
             // based on the percentage, take the rank of one model
             if (index < itemBasedThreshold) (user1, (song1, rank2))
             else (user1, (song1, rank1))
@@ -245,6 +292,15 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
+  /**
+   * Calculate stochastic combination model given the user and the item based models and an itemBasedProbability parameter
+   *
+   * @param ubm                  the user based model
+   * @param ibm                  the item based model
+   * @param itemBasedProbability threshold over which ranks are chosen from ibm model
+   * @param parallel             specify if the computation should be parallelized or not
+   * @return the stochastic combination model
+   */
   def getStochasticCombinationModel(ubm: List[(String, String, Double)],
                                     ibm: List[(String, String, Double)],
                                     itemBasedProbability: Double = 0.5,
@@ -252,8 +308,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
     // Exit if percentage is not in the range 0 <= p <= 1
     if (itemBasedProbability < 0 || itemBasedProbability > 1) {
-      System.err.println("Probability must be between 0 and 1\n");
-      System.exit(-1);
+      System.err.println("Probability must be between 0 and 1\n")
+      System.exit(-1)
     }
 
     if (parallel) {
@@ -262,7 +318,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       ubm.zip(ibm).par.map({
         // for each pair
         case ((user1, song1, rank1), (user2, song2, rank2)) =>
-          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // catch error during zip
+          if ((user1 != user2) || (song1 != song2)) System.exit(2)
           // based on the probability, take the rank of one model
           if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
           else (user1, (song1, rank1))
@@ -273,7 +330,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       ubm.zip(ibm).map({
         // for each pair
         case ((user1, song1, rank1), (user2, song2, rank2)) =>
-          if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
+          // catch error during zip
+          if ((user1 != user2) || (song1 != song2)) System.exit(2)
           // based on the probability, take the rank of one model
           if (random.nextFloat() < itemBasedProbability) (user1, (song1, rank2))
           else (user1, (song1, rank1))
@@ -282,18 +340,29 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
+  /**
+   * Store a model into a file; useful to separate the computations between user/item based models and combination models
+   *
+   * @param model          the model to be stored
+   * @param outputFileName the path to the file the model is being stored to
+   */
   def writeModelOnFile(model: GenSeq[(String, (String, Double))], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
-    // we are printing to a file; therefore, parallelization would not improve performances
     model foreach (el => {
       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
     })
     out.close()
   }
 
+  /**
+   * Import a model previously stored in a file; useful to separate the computations between user/item based models
+   * and the combination models
+   *
+   * @param pathToModel the path to the file containing the model
+   * @return the model
+   */
   def importModelFromFile(pathToModel: String): List[(String, String, Double)] = {
     def modelFile: BufferedSource = Source.fromResource(pathToModel)
-
     val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.reverse)
     val model = modelFile.getLines().toList map (line => line split "\t" match {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
@@ -303,15 +372,16 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   /**
    * Convert the prediction scores to class labels
-   * @param model the predictions scores for test users
+   *
+   * @param model     the predictions scores for test users
    * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
    * @return map of list of songs the user will listen predicted by the model for each user
    */
   private def predictionToClassLabels(model: GenSeq[(String, (String, Double))], threshold: Double = 0.0): Map[String, List[String]] = {
-    // @model contains the prediction scores for test users
+    // model contains the prediction scores for test users
     val predictions = collection.mutable.Map[String, List[String]]()
-    val min = model.map(el => (el._2._2)).min
-    val max = model.map(el => (el._2._2)).max
+    val min = model.map(el => el._2._2).min
+    val max = model.map(el => el._2._2).max
 
     model foreach (el => {
       // values can be greater than 1, therefore normalization is advised
@@ -320,8 +390,15 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     predictions.toMap
   }
 
+  /**
+   * Calculate the confusion matrix wrt a specific class given the predictions provided by the model
+   *
+   * @param predictions the predictions provided by the model given a specific threshold
+   * @param song        the class over we are calculating the confusion matrix
+   * @return the confusion matrix for a specific class song
+   */
   private def confusionMatrix(predictions: Map[String, List[String]], song: String): (Int, Int, Int, Int) = {
-    // NB: if threshold too high, user could not be in predictions!
+    // if threshold too high, user could not be in predictions!
     testUsers.map(user => (
       // True positives
       if (predictions.contains(user) && predictions(user).contains(song) && testLabels(user).contains(song)) 1 else 0,
@@ -336,6 +413,9 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   /**
    * Calculate precision = TP / (TP + FP)
+   *
+   * @param confusionMatrix the confusion matrix wrt to the model using a specific threshold wrt the testLabels
+   * @return the precision of the model for a specific class
    */
   private def precision(confusionMatrix: (Int, Int, Int, Int)): Double = {
     if (confusionMatrix._1 + confusionMatrix._2 > 0.0)
@@ -346,6 +426,9 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   /**
    * Calculate recall = TP / (TP + FN)
+   *
+   * @param confusionMatrix the confusion matrix wrt to the model using a specific threshold wrt the testLabels
+   * @return the recall of the model for a specific class
    */
   private def recall(confusionMatrix: (Int, Int, Int, Int)): Double = {
     if (confusionMatrix._1 + confusionMatrix._4 > 0.0)
@@ -354,13 +437,26 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
       0.0
   }
 
+  /**
+   * Calculate the average precision of the model for each class (i.e., each song)
+   *
+   * @param model the model to be evaluated
+   * @return a list containing the average precisions for each class (i.e., each song)
+   */
   private def averagePrecision(model: GenSeq[(String, (String, Double))]): List[(String, Double)] = {
-    val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: 1.0 :: Nil
+    // the thresholds at which a rank is considered to be positive or negative (_ <= t == 0, _ > t == 1)
+    val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: Nil
     // predictions = (threshold) -> (user -> list of songs)
     val predictions = for {t <- thresholds} yield {predictionToClassLabels(model, t)}
-    // TODO: evaluate recalls (and eventually precisions) beforehand to spare O(length of thresholds) calls to recall and confusionMatrix
+
+    /**
+     * Calculate the average precision of the model for a single class
+     *
+     * @param song the class wrt the model is being evaluated
+     * @return the average precision of the model for the class song
+     */
     def singleAveragePrecision(song: String): Double = {
-      thresholds.zipWithIndex.map(t => (
+      thresholds.zipWithIndex.map(t =>
         if (t._2 == (thresholds.length - 1)) {
           0.0
         }
@@ -368,20 +464,30 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
           (recall(confusionMatrix(predictions(t._2), song)) - 0.0) * precision(confusionMatrix(predictions(t._2), song))
         } else
           (recall(confusionMatrix(predictions(t._2), song)) - recall(confusionMatrix(predictions(t._2 + 1), song))) * precision(confusionMatrix(predictions(t._2), song))
-        )).sum
+        ).sum
     }
 
     for {song <- newSongs} yield {(song, singleAveragePrecision(song))}
   }
 
+  /**
+   * Calculate the mean Average Precision (mAP) of the given model
+   *
+   * @param model the model to be evaluated
+   * @return the mAP of the model
+   */
   private def meanAveragePrecision(model: GenSeq[(String, (String, Double))]): Double = {
-    averagePrecision(model).map(ap => (
-      ap._2
-    )).sum / newSongs.length
+    averagePrecision(model).map(ap => ap._2).sum / newSongs.length
   }
 
+  /**
+   * Evaluate the model using mAP
+   *
+   * @param model the model to be evaluated
+   * @return the mAP of the model
+   */
   def evaluateModel(model: GenSeq[(String, (String, Double))]): Double = {
-    // @model contains the prediction scores for test users
+    // model contains the prediction scores for test users
     meanAveragePrecision(model.toList)
   }
 

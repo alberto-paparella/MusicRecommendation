@@ -11,14 +11,14 @@ object main {
     // verbosity of the output (true = debugging, false = execution)
     val verbose = true
 
+    // number of train and test users (available datasets: 100_10, 100_50, 100_100, 500_10, 500_50, 500_100, ...)
     def trainUsersN: Integer = 100
     def testUsersN: Integer = 10
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_${testUsersN}.txt")
-    def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_${testUsersN}.txt")
-    def testLabels: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_${testUsersN}.txt")
-
+    def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
+    def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_$testUsersN.txt")
+    def testLabels: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_$testUsersN.txt")
     if (verbose) println("Loaded files")
 
     // instantiate musicRecommender
@@ -27,10 +27,10 @@ object main {
 
     // calculating models (both sequential and parallel)
     val (
-      userBasedModel: GenSeq[GenSeq[(String, (String, Double))]],
-      userBasedModelP: GenSeq[GenSeq[(String, (String, Double))]],
-      itemBasedModel: GenSeq[GenSeq[(String, (String, Double))]],
-      itemBasedModelP: GenSeq[GenSeq[(String, (String, Double))]]
+      userBasedModel: GenSeq[(String, (String, Double))],
+      userBasedModelP: GenSeq[(String, (String, Double))],
+      itemBasedModel: GenSeq[(String, (String, Double))],
+      itemBasedModelP: GenSeq[(String, (String, Double))]
       ) = if (verbose) (
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
         MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Parallel) user-based model"),
@@ -44,12 +44,12 @@ object main {
       )
 
     // saving models to file (both sequential and parallel)
-    musicRecommender.writeModelOnFile(userBasedModel.flatten, "models/userBasedModel.txt")
-    musicRecommender.writeModelOnFile(userBasedModelP.flatten, "models/userBasedModelP.txt")
-    musicRecommender.writeModelOnFile(itemBasedModel.flatten, "models/itemBasedModel.txt")
-    musicRecommender.writeModelOnFile(itemBasedModelP.flatten, "models/itemBasedModelP.txt")
+    musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
+    musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
+    musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
+    musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
 
-    // importing models from file (in case you wanna skip/separate execution wrt ubm and ibm
+    // importing models from file (in case you wanna skip/separate execution wrt ubm and ibm)
     val ubm = musicRecommender.importModelFromFile("models/userBasedModel.txt")
     val ibm = musicRecommender.importModelFromFile("models/itemBasedModel.txt")
 
@@ -92,10 +92,10 @@ object main {
     musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
 
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
-    println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel.flatten))
-    println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP.flatten))
-    println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel.flatten))
-    println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP.flatten))
+    println("(Sequential) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModel))
+    println("(Parallel) user-based model mAP: " + musicRecommender.evaluateModel(userBasedModelP))
+    println("(Sequential) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModel))
+    println("(Parallel) item-based model mAP: " + musicRecommender.evaluateModel(itemBasedModelP))
     println("(Sequential) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModel))
     println("(Parallel) linear-combination model mAP: " + musicRecommender.evaluateModel(linearCombinationModelP))
     println("(Sequential) aggregation model model mAP: " + musicRecommender.evaluateModel(aggregationModel))
@@ -103,4 +103,5 @@ object main {
     println("(Sequential) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModel))
     println("(Parallel) stochastic-combination model mAP: " + musicRecommender.evaluateModel(stochasticCombinationModelP))
   }
+
 }
