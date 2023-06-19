@@ -11,30 +11,46 @@ import scala.collection.parallel.ParSeq
 
 object distributed extends Serializable  {
 
-
+  /**
+   * Store a model into a file; useful to separate the computations between user/item based models and combination models
+   *
+   * @param model          the model to be stored
+   * @param outputFileName the path to the file the model is being stored to
+   * @tparam T the internal type of the model
+   */
   def writeModelOnFile[T](model: Array[T], outputFileName: String = ""): Unit = {
     val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
-    // we are printing to a file; therefore, parallelization would not improve performances
-    model foreach({
+    model foreach{
       case seq: Seq[(String, (String, Double))] =>
         seq foreach (el2 => {
           out.write(s"${el2._1}\t${el2._2._1}\t${el2._2._2}\n")
         })
       case tuple: (String, (String, Double)) =>
         out.write(s"${tuple._1}\t${tuple._2._1}\t${tuple._2._2}\n")
-    })
+    }
     out.close()
   }
 
+  /**
+   * Import a model previously stored in a file; useful to separate the computations between user/item based models
+   * and the combination models
+   *
+   * @param pathToModel the path to the file containing the model
+   * @return the model
+   */
   private def importModel(pathToModel: String): Seq[(String, String, Double)] = {
     def modelFile: BufferedSource = Source.fromResource(pathToModel)
-
     val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.reverse)
     val model = modelFile.getLines().toList map (line => line split "\t" match {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
     }) sorted ordering
     model
   }
+
+  /**
+   * The main function; computation starts here
+   * @param args void
+   */
   def main(args: Array[String]): Unit = {
 
     // verbosity of the output (true = debugging, false = execution)
@@ -44,9 +60,9 @@ object distributed extends Serializable  {
     def testUsersN: Integer = 10
 
     // import train and test datasets
-    def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_${testUsersN}.txt")
-    def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_${testUsersN}.txt")
-    def testLabelsFile: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_${testUsersN}.txt")
+    def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
+    def test: BufferedSource = Source.fromResource(s"test_${trainUsersN}_$testUsersN.txt")
+    def testLabelsFile: BufferedSource = Source.fromResource(s"test_labels_${trainUsersN}_$testUsersN.txt")
 
     if (verbose) println("Loaded files")
 
@@ -61,6 +77,7 @@ object distributed extends Serializable  {
 
     /**
      * Read file containing the data storing them in their relative structures
+     *
      * @param in file containing the data
      * @return list of users in the file and map of list of songs for each user
      */
@@ -96,6 +113,7 @@ object distributed extends Serializable  {
 
     /**
      * Import data from the test labels file used for evaluation
+     *
      * @param in file containing the test labels data
      * @return a map representing for each test user the latter half of its music history (i.e., the ground truth)
      */
@@ -106,12 +124,11 @@ object distributed extends Serializable  {
       for {
         line <- in.getLines().toList
       } yield line split "\t" match {
-        case Array(u, s, _) => {
+        case Array(u, s, _) =>
           // users are the same as in testUsers, while testLabels could contain new songs
           newSongs add s
           // update map
           testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
-        }
       }
       (testLabels.toMap, newSongs.toList)
     }
@@ -120,19 +137,42 @@ object distributed extends Serializable  {
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // parallelized here because SparkContext cannot be serialized (e.g. inside averagePrecision function)
     val newSongsRdd = ctx.parallelize(newSongs)
+
+    /**
+     * ******************************************************************************************
+     * OBJECTS FOR COMPUTATION DISTRIBUTION
+     * ******************************************************************************************
+     */
+
+    /**
+     * User based model functions
+     */
     object UserBasedModel {
-      // calculate the cosine similarity between two users
+      /**
+       * Get the cosine similarity between two users
+       *
+       * @param user1 the first user (presumably from test users)
+       * @param user2 the second user (presumably from trains users)
+       * @return the cosine similarity between the two users
+       */
       def cosineSimilarity(user1: String, user2: String): Double = {
-        // number of song listened by both users
+        // number of songs listened by both users
         val numerator = songs.map(song =>
           // if both users listened to song return 1, else 0
           if (testUsersToSongsMap(user1).contains(song) && trainUsersToSongsMap(user2).contains(song)) 1 else 0
         ).sum
-        // usersToSongMap(user).length represents how many songs the user listened to
+        // _usersToSongMap(user).length represents how many songs the user listened to
         val denominator = sqrt(testUsersToSongsMap(user1).length) * sqrt(trainUsersToSongsMap(user2).length)
         if (denominator != 0) numerator / denominator else 0.0
       }
 
+      /**
+       * Calculate the rank for each song for the user (i.e., the sum of the cosine similarities with the users in train
+       * users who listened to the song)
+       *
+       * @param user the user
+       * @return the rank for each song for the user
+       */
       def getRanks1(user: String):ParSeq[(String, (String, Double))] = {
         // foreach song, calculate the score for the user
         for {
@@ -142,6 +182,13 @@ object distributed extends Serializable  {
         }
       }
 
+      /**
+       * Calculate the rank for the song for each user (i.e., the sum of the cosine similarities with the users in train
+       * users who listened to the song)
+       *
+       * @param song the song
+       * @return the rank for the song for each user
+       */
       def getRanks2(song: String): ParSeq[(String, (String, Double))] = {
         // foreach user, calculate the score for the user
         for {
@@ -151,6 +198,14 @@ object distributed extends Serializable  {
         }
       }
 
+      /**
+       * Calculate the rank of the song for the user (i.e., the sum of the cosine similarities with the users in train
+       * users who listened to the song)
+       *
+       * @param user the user
+       * @param song the song
+       * @return the rank of the song for the user
+       */
       def rank(user: String, song: String): Double = {
         // sum the cosine similarities between the user and each user in the training set that listened to the song
         for {
@@ -161,27 +216,34 @@ object distributed extends Serializable  {
       } sum
     }
 
+    /**
+     * Item based model functions
+     */
     object ItemBasedModel {
-      // calculate the cosine similarity between two songs
+      /**
+       * Get the cosine similarity between two songs
+       *
+       * @param song1 the first song
+       * @param song2 the second song
+       * @return the cosine similarity between the two songs
+       */
       def cosineSimilarity(song1: String, song2: String): Double = {
-        val numerator = trainUsers.map(user => (
+        // number of users who listened to both songs
+        val numerator = trainUsers.map(user =>
           // if the user listened to both songs return 1, else 0
-          if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0
-          )).sum
+          if (songsToUsersMap(song1).contains(user) && songsToUsersMap(song2).contains(user)) 1 else 0).sum
         // pre-calculate denominator to catch if it is equal to 0
         val denominator = sqrt(songsToUsersMap(song1).length) * sqrt(songsToUsersMap(song2).length)
         if (denominator != 0) numerator / denominator else 0
       }
 
-      def rank(user: String, song: String): Double = {
-        // sum the cosine similarities between the song and each other song the user listened to
-        for {
-          song2 <- songs filter(song2 => song2 != song && songsToUsersMap(song2).contains(user))
-        } yield {
-          cosineSimilarity(song, song2)
-        }
-      } sum
-
+      /**
+       * Calculate the rank for each song for the user (i.e., the sum of the cosine similarities of the songs listened by
+       * the user with the other songs)
+       *
+       * @param user the user
+       * @return the rank for each song for the user
+       */
       def getRanks1(user: String): ParSeq[(String, (String, Double))] = {
         // foreach song, calculate the score for the user
         for {
@@ -191,6 +253,13 @@ object distributed extends Serializable  {
         }
       }
 
+      /**
+       * Calculate the rank for the song for each user (i.e., the sum of the cosine similarities of the songs listened by
+       * the user with the other songs)
+       *
+       * @param song the song
+       * @return the rank for the song for each user
+       */
       def getRanks2(song: String): ParSeq[(String, (String, Double))] = {
         // foreach user, calculate the score for the user
         for {
@@ -199,20 +268,41 @@ object distributed extends Serializable  {
           user -> (song, rank(user, song))
         }
       }
+
+      /**
+       * Calculate the rank of the song for the user (i.e., the sum of the cosine similarities of the songs listened by
+       * the user with the other songs)
+       *
+       * @param user the user
+       * @param song the song
+       * @return the rank for each song for each user
+       */
+      def rank(user: String, song: String): Double = {
+        // sum the cosine similarities between the song and each other song the user listened to
+        for {
+          song2 <- songs filter (song2 => song2 != song && songsToUsersMap(song2).contains(user))
+        } yield {
+          cosineSimilarity(song, song2)
+        }
+      } sum
     }
 
-    object evaluation_functions extends Serializable {
+    /**
+     * Functions for the evaluation of the models
+     */
+    object EvaluationFunctions extends Serializable {
       /**
        * Convert the prediction scores to class labels
+       *
        * @param model     the predictions scores for test users
        * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
        * @return map of list of songs the user will listen predicted by the model for each user
        */
       def predictionToClassLabels(model: Array[(String,(String, Double))], threshold: Double = 0.0): Map[String, List[String]] = {
-        // @model contains the prediction scores for test users
+        // model contains the prediction scores for test users
         val predictions = collection.mutable.Map[String, List[String]]()
-        val min = model.map(el => (el._2._2)).min
-        val max = model.map(el => (el._2._2)).max
+        val min = model.map(el => el._2._2).min
+        val max = model.map(el => el._2._2).max
 
         model foreach (el => {
           // values can be greater than 1, therefore normalization is advised
@@ -221,6 +311,13 @@ object distributed extends Serializable  {
         predictions.toMap
       }
 
+      /**
+       * Calculate the confusion matrix wrt a specific class given the predictions provided by the model
+       *
+       * @param predictions the predictions provided by the model given a specific threshold
+       * @param song        the class over we are calculating the confusion matrix
+       * @return the confusion matrix for a specific class song
+       */
       def confusionMatrix(predictions: Map[String, List[String]], song: String): (Int, Int, Int, Int) = {
         // NB: if threshold too high, user could not be in predictions!
         testUsers.map(user => (
@@ -237,6 +334,9 @@ object distributed extends Serializable  {
 
       /**
        * Calculate precision = TP / (TP + FP)
+       *
+       * @param confusionMatrix the confusion matrix wrt to the model using a specific threshold wrt the testLabels
+       * @return the precision of the model for a specific class
        */
       def precision(confusionMatrix: (Int, Int, Int, Int)): Double = {
         if (confusionMatrix._1 + confusionMatrix._2 > 0.0)
@@ -247,6 +347,9 @@ object distributed extends Serializable  {
 
       /**
        * Calculate recall = TP / (TP + FN)
+       *
+       * @param confusionMatrix the confusion matrix wrt to the model using a specific threshold wrt the testLabels
+       * @return the recall of the model for a specific class
        */
       def recall(confusionMatrix: (Int, Int, Int, Int)): Double = {
         if (confusionMatrix._1 + confusionMatrix._4 > 0.0)
@@ -255,6 +358,12 @@ object distributed extends Serializable  {
           0.0
       }
 
+      /**
+       * Calculate the average precision of the model for each class (i.e., each song)
+       *
+       * @param model the model to be evaluated
+       * @return a list containing the average precisions for each class (i.e., each song)
+       */
       def averagePrecision(model: Array[(String, (String, Double))]): RDD[(String, Double)] = {
         val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: 1.0 :: Nil
         // predictions = (threshold) -> (user -> list of songs)
@@ -262,6 +371,12 @@ object distributed extends Serializable  {
           predictionToClassLabels(model, t)
         }
 
+        /**
+         * Calculate the average precision of the model for a single class
+         *
+         * @param song the class wrt the model is being evaluated
+         * @return the average precision of the model for the class song
+         */
         def singleAveragePrecision(song: String): Double = {
           thresholds.zipWithIndex.map(t =>
             if (t._2 == (thresholds.length - 1)) {
@@ -277,92 +392,101 @@ object distributed extends Serializable  {
          newSongsRdd map (song => (song, singleAveragePrecision(song)))
       }
 
+      /**
+       * Calculate the mean Average Precision (mAP) of the given model
+       *
+       * @param model the model to be evaluated
+       * @return the mAP of the model
+       */
       def meanAveragePrecision(model: Array[(String, (String, Double))]): Double = {
         averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
       }
 
+      /**
+       * Evaluate the model using mAP
+       *
+       * @param model the model to be evaluated
+       * @return the mAP of the model
+       */
       def evaluateModel(model: Array[(String, (String, Double))]): Double = {
         // @model contains the prediction scores for test users
         meanAveragePrecision(model)
       }
     }
 
-    // Version distributing over users (internal parallelization over songs)
+    /**
+     * Calculate user based model. Version distributing over users (internal parallelization over songs)
+     *
+     * @return user based model
+     */
     def getUserBasedModel1: Array[(String, (String, Double))] = {
       ctx.parallelize(testUsers).map(user => UserBasedModel.getRanks1(user).seq).collect.flatten
     }
 
-    // Version distributing over songs (internal parallelization over users)
+    /**
+     * Calculate user based model. Version distributing over songs (internal parallelization over users)
+     *
+     * @return user based model
+     */
     def getUserBasedModel2: Array[(String, (String, Double))] = {
       ctx.parallelize(songs).map(song => UserBasedModel.getRanks2(song).seq).collect.flatten
     }
 
-    // Version distributing over users (internal parallelization over songs)
+    /**
+     * Calculate item based model. Version distributing over users (internal parallelization over songs)
+     *
+     * @return item based model
+     */
     def getItemBasedModel1: Array[(String, (String, Double))] = {
       ctx.parallelize(testUsers).map(user => ItemBasedModel.getRanks1(user).seq).collect.flatten
     }
 
-    // Version distributing over songs (internal parallelization over users)
+    /**
+     * Calculate item based model. Version distributing over songs (internal parallelization over users)
+     *
+     * @return item based model
+     */
     def getItemBasedModel2: Array[(String, (String, Double))] = {
       ctx.parallelize(songs).map(song => ItemBasedModel.getRanks2(song).seq).collect.flatten
     }
 
-    // songs >> users, nodes << cores per node (or songs << users, nodes >> cores per node)
-    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based")
-    val ibModel = MyUtils.time(getItemBasedModel1, "(Distributed) item-based")
-
-    // songs >> users, nodes >> cores per node (or songs << users, nodes << cores per node)
-    //val ubModel = MyUtils.time(getUserBasedModel2, "(Distributed) user-based")
-    //val ibModel = MyUtils.time(getItemBasedModel2, "(Distributed) item-based")
-
-    /*
-    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
-    writeModelOnFile(ibModel, "models/itemBasedModelD.txt")
-    */
-
-    //val ubm = importModel("models/userBasedModelD.txt")
-    //val ibm = importModel("models/itemBasedModelD.txt")
-    val ordering = Ordering.Tuple2(Ordering.String, Ordering.Tuple2(Ordering.String, Ordering.Double.reverse))
-    val ubm = ubModel sorted ordering
-    val ibm = ibModel sorted ordering
-
     /**
-     * Calculate linear combination model given ubm model, ibm model and an alpha parameter
-     * @param ubmModel
-     * @param ibmModel
-     * @param lcAlpha weight of the contribute of the two models
-     * @return
+     * Calculate linear combination model given the user and the item based models and an alpha parameter
+     *
+     * @param ubm      the user based model
+     * @param ibm      the item based model
+     * @param alpha    weight of the contribute of the user based model; ibm will be weighted accordingly (lcAlpha - 1)
+     * @return the linear combination model
      */
-    def getLinearCombinationModel(ubmModel: Array[(String, (String, Double))],
-                                  ibmModel: Array[(String, (String, Double))],
-                                  lcAlpha: Double = 0.5): Array[(String, (String, Double))] = {
+    def getLinearCombinationModel(ubm: Array[(String, (String, Double))],
+                                  ibm: Array[(String, (String, Double))],
+                                  alpha: Double = 0.5): Array[(String, (String, Double))] = {
 
-      ctx.parallelize(ubmModel.zip(ibmModel)) map {
+      ctx.parallelize(ubm.zip(ibm)) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
           // return (user, song, ranks linear combination)
-          (user1 -> (song1, rank1 * lcAlpha + rank2 * (1 - lcAlpha)))
+          user1 -> (song1, rank1 * alpha + rank2 * (1 - alpha))
       } collect()
     }
 
-    val lcModel = MyUtils.time(getLinearCombinationModel(ubm, ibm), "(Distributed) linear combination")
-
     /**
-     * Calculate aggregation model given
-     * @param ubmModel
-     * @param ibmModel
+     * Calculate aggregation model given the user and the item based models and an itemBasedPercentage parameter
+     *
+     * @param ubm                 the user based model
+     * @param ibm                 the item based model
      * @param itemBasedPercentage how many ranks are taken from ubm and ibm
-     * @return
+     * @return the aggregation model
      */
-    def getAggregationModel(ubmModel: Array[(String, (String, Double))],
-                            ibmModel: Array[(String, (String, Double))],
+    def getAggregationModel(ubm: Array[(String, (String, Double))],
+                            ibm: Array[(String, (String, Double))],
                             itemBasedPercentage: Double = 0.5): Array[(String, (String, Double))] = {
 
-      val length = ubmModel.length
+      val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-      ctx.parallelize(ubmModel.zip(ibmModel).zipWithIndex) map{
+      ctx.parallelize(ubm.zip(ibm).zipWithIndex) map{
         // for each pair
         case (couple, index) => couple match {
           case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
@@ -374,21 +498,20 @@ object distributed extends Serializable  {
       } collect()
     }
 
-    val aModel = MyUtils.time(getAggregationModel(ubm, ibm), "(Distributed) aggregation model")
-
     /**
-     * Calculate stochastic model given
-     * @param ubmModel
-     * @param ibmModel
+     * Calculate stochastic combination model given the user and the item based models and an itemBasedProbability parameter
+     *
+     * @param ubm                  the user based model
+     * @param ibm                  the item based model
      * @param itemBasedProbability threshold over which ranks are chosen from ibm model
-     * @return
+     * @return the stochastic combination model
      */
-    def getStochasticModel(ubmModel: Array[(String, (String, Double))],
-                            ibmModel: Array[(String, (String, Double))],
+    def getStochasticModel(ubm: Array[(String, (String, Double))],
+                           ibm: Array[(String, (String, Double))],
                            itemBasedProbability: Double = 0.5): Array[(String, (String, Double))] = {
       val random = new Random
       // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-      ctx.parallelize(ubmModel.zip(ibmModel)) map {
+      ctx.parallelize(ubm.zip(ibm)) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
@@ -398,20 +521,48 @@ object distributed extends Serializable  {
       } collect()
     }
 
+    // songs >> users, nodes << cores per node (or songs << users, nodes >> cores per node)
+    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based")
+    val ibModel = MyUtils.time(getItemBasedModel1, "(Distributed) item-based")
+
+    // songs >> users, nodes >> cores per node (or songs << users, nodes << cores per node)
+    //val ubModel = MyUtils.time(getUserBasedModel2, "(Distributed) user-based")
+    //val ibModel = MyUtils.time(getItemBasedModel2, "(Distributed) item-based")
+
+    /*
+    // saving models to file
+    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
+    writeModelOnFile(ibModel, "models/itemBasedModelD.txt")
+
+    // importing models from file
+    val ubm = importModel("models/userBasedModelD.txt")
+    val ibm = importModel("models/itemBasedModelD.txt")
+     */
+
+    // ordering user/item based models is needed to make use of zipWithIndex in combination models
+    val ordering = Ordering.Tuple2(Ordering.String, Ordering.Tuple2(Ordering.String, Ordering.Double.reverse))
+    val ubm = ubModel sorted ordering
+    val ibm = ibModel sorted ordering
+
+    // calculating combination models
+    val lcModel = MyUtils.time(getLinearCombinationModel(ubm, ibm), "(Distributed) linear combination")
+    val aModel = MyUtils.time(getAggregationModel(ubm, ibm), "(Distributed) aggregation model")
     val scModel = MyUtils.time(getStochasticModel(ubm, ibm), "(Distributed) stochastic combination model")
 
-    // writing on files
-//    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
-//    writeModelOnFile(ibModel, "models/itemBasedModelD.txt")
-//    writeModelOnFile(lcModel, "models/linearCombinationModelD.txt")
-//    writeModelOnFile(aModel, "models/aggregationModelD.txt")
-//    writeModelOnFile(scModel, "models/stochasticCombinationModelD.txt")
+    // saving models to file
+    /*
+    writeModelOnFile(ubModel, "models/userBasedModelD.txt")
+    writeModelOnFile(ibModel, "models/itemBasedModelD.txt")
+    writeModelOnFile(lcModel, "models/linearCombinationModelD.txt")
+    writeModelOnFile(aModel, "models/aggregationModelD.txt")
+    writeModelOnFile(scModel, "models/stochasticCombinationModelD.txt")
+     */
 
-    // models evaluation
-    println("(Distributed) user-based model mAP: " + evaluation_functions.evaluateModel(ubModel))
-    println("(Distributed) item-based model mAP: " + evaluation_functions.evaluateModel(ibModel))
-    println("(Distributed) linear-combination model mAP: " + evaluation_functions.evaluateModel(lcModel))
-    println("(Distributed) aggregation model mAP: " + evaluation_functions.evaluateModel(aModel))
-    println("(Distributed) stochastic model mAP: " + evaluation_functions.evaluateModel(scModel))
+    // evaluating models; mAP should be the same wrt seq and par models
+    println("(Distributed) user-based model mAP: " + EvaluationFunctions.evaluateModel(ubModel))
+    println("(Distributed) item-based model mAP: " + EvaluationFunctions.evaluateModel(ibModel))
+    println("(Distributed) linear-combination model mAP: " + EvaluationFunctions.evaluateModel(lcModel))
+    println("(Distributed) aggregation model mAP: " + EvaluationFunctions.evaluateModel(aModel))
+    println("(Distributed) stochastic model mAP: " + EvaluationFunctions.evaluateModel(scModel))
   }
 }

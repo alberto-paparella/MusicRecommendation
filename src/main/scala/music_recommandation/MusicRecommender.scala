@@ -140,12 +140,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     }
 
     /**
-     * Calculate the rank for each song for each user (i.e., the sum of the cosine similarities with the users in train
+     * Calculate the rank of the song for the user (i.e., the sum of the cosine similarities with the users in train
      * users who listened to the song)
      *
      * @param user the user
      * @param song the song
-     * @return the rank for each song for user
+     * @return the rank for each song for each user
      */
     def rank(user: String, song: String): Double = {
       for {
@@ -167,7 +167,13 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @return the user item model
    */
   def getItemBasedModel(parallel: Boolean = false): GenSeq[(String, (String, Double))] = {
-    // it calculates the cosine similarity between two songs
+    /**
+     * Get the cosine similarity between two songs
+     *
+     * @param song1 the first song
+     * @param song2 the second song
+     * @return the cosine similarity between the two songs
+     */
     def cosineSimilarity(song1: String, song2: String): Double = {
       // number of users who listened to both songs
       val numerator = trainUsers.iterator.map(user =>
@@ -180,12 +186,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     }
 
     /**
-     * Calculate the rank for each song for each user (i.e., the sum of the cosine similarities of the songs listened by
+     * Calculate the rank of the song for the user (i.e., the sum of the cosine similarities of the songs listened by
      * the user with the other songs)
      *
      * @param user the user
      * @param song the song
-     * @return the rank for each song for user
+     * @return the rank for each song for each user
      */
     def rank(user: String, song: String): Double = {
       for {
