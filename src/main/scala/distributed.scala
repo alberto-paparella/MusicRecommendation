@@ -56,7 +56,7 @@ object distributed extends Serializable  {
     // verbosity of the output (true = debugging, false = execution)
     val verbose = true
 
-    def trainUsersN: Integer = 100
+    def trainUsersN: Integer = 1000
     def testUsersN: Integer = 100
 
     // import train and test datasets
@@ -401,6 +401,7 @@ object distributed extends Serializable  {
        * @return the mAP of the model
        */
       def meanAveragePrecision(model: Array[(String, (String, Double))]): Double = {
+        //averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
         averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
       }
 

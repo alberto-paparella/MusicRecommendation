@@ -12,7 +12,7 @@ object main {
     val verbose = true
 
     // number of train and test users (available datasets: 100_10, 100_50, 100_100, 500_10, 500_50, 500_100, ...)
-    def trainUsersN: Integer = 100
+    def trainUsersN: Integer = 300
     def testUsersN: Integer = 10
 
     // import train and test datasets
