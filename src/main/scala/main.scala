@@ -102,7 +102,8 @@ object main {
       MyUtils.time(musicRecommender.evaluateModel(aggregationModel),"(Sequential) aggregation model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(aggregationModelP, parallel=true),"(Parallel) aggregation model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModel),"(Sequential) stochastic-combination model mAP"),
-      MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModelP, parallel=true),"(Parallel) stochastic-combination model mAP"))
+      MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModelP, parallel=true),"(Parallel) stochastic-combination model mAP")
+    )
     println("(Sequential) user-based model mAP: " + mAP._1)
     println("(Parallel) user-based model mAP: " + mAP._2)
     println("(Sequential) item-based model mAP: " + mAP._3)
@@ -113,6 +114,6 @@ object main {
     println("(Parallel) aggregation model mAP: " + mAP._8)
     println("(Sequential) stochastic-combination model mAP: " + mAP._9)
     println("(Parallel) stochastic-combination model mAP: " + mAP._10)
-  }
 
+  }
 }

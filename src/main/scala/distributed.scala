@@ -566,8 +566,9 @@ object distributed extends Serializable  {
       MyUtils.time(EvaluationFunctions.evaluateModel(ibModel), "(Distributed) item-based model mAP"),
       MyUtils.time(EvaluationFunctions.evaluateModel(lcModel), "(Distributed) linear-combination model mAP"),
       MyUtils.time(EvaluationFunctions.evaluateModel(aModel),  "(Distributed) aggregation model mAP"),
-      MyUtils.time(EvaluationFunctions.evaluateModel(scModel), "(Distributed) stochastic-combination model mAP"))
-    println("(Distributed) user-based model mAP: " + mAP._1)
+      MyUtils.time(EvaluationFunctions.evaluateModel(scModel), "(Distributed) stochastic-combination model mAP")
+     )
+    println("(Distributed) user-based model mAP: " + mAP)
     println("(Distributed) item-based model mAP: " + mAP._2)
     println("(Distributed) linear-combination model mAP: " + mAP._3)
     println("(Distributed) aggregation model model mAP: " + mAP._4)

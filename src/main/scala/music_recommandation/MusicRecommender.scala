@@ -488,7 +488,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @return the mAP of the model
    */
   private def meanAveragePrecision(model: GenSeq[(String, (String, Double))], parallel: Boolean): Double = {
-    averagePrecision(model, parallel).map(ap => ap._2).sum / newSongs.length
+    averagePrecision(model, parallel).map(ap => ap._2).foldLeft(0.0)(_+_) / newSongs.length
   }
 
   /**
