@@ -12,8 +12,10 @@ object main {
     val verbose = true
 
     // number of train and test users (available datasets: 100_10, 100_50, 100_100, 500_10, 500_50, 500_100, ...)
-    def trainUsersN: Integer = 300
-    def testUsersN: Integer = 10
+    def trainUsersN: Integer = if(args.length >= 2) args(0).toInt else 100
+    def testUsersN: Integer = if(args.length >= 2) args(1).toInt else 10
+
+    if(verbose) println(s"Train users: ${trainUsersN}\nTest users: ${testUsersN}")
 
     // import train and test datasets
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
