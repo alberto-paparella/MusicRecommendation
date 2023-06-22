@@ -3,7 +3,6 @@ package music_recommandation
 import java.io._
 import scala.collection.GenSeq
 import scala.collection.immutable._
-import scala.collection.parallel.ParSeq
 import scala.collection.parallel.mutable.ParArray
 import scala.io._
 import scala.language.postfixOps
@@ -60,11 +59,9 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   // convert mutable to immutable list
   private val songs: Array[String] = mutSongs.toArray
   // convert mutable to immutable map
-  private val songsToUsersMap = mutSongsToUsersMap.map(entry => {
-    entry match {
-      case (k, v) => k -> v.toArray
-    }
-  }).toMap
+  private val songsToUsersMap = mutSongsToUsersMap.map {
+    case (k, v) => k -> v.toArray
+  }.toMap
 
   /**
    * Import data from the test labels file used for evaluation
@@ -86,11 +83,9 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
         mutTestLabels.update(u, s :: mutTestLabels.getOrElse(u, Nil))
     }
 
-    val testLabels: Map[String, Array[String]] = mutTestLabels.map(entry => {
-      entry match {
-        case (key, value) => key -> value.toArray
-      }
-    }).toMap
+    val testLabels: Map[String, Array[String]] = mutTestLabels.map {
+      case (key, value) => key -> value.toArray
+    }.toMap
     (testLabels, newSongs.toArray)
   }
 
@@ -314,14 +309,14 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @param parallel specify if the computation should be parallelized or not
    * @return the linear combination model
    */
-  def getLinearCombinationModel(ubm: Array[(String, String, Double)],
-                                ibm: Array[(String, String, Double)],
+  def getLinearCombinationModel(ubm: Array[(String, (String, Double))],
+                                ibm: Array[(String, (String, Double))],
                                 alpha: Double): Array[(String, (String, Double))] = {
 
     // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
     ubm.zip(ibm).map({
       // for each pair
-      case ((user1, song1, rank1), (user2, song2, rank2)) =>
+      case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
         // Catch error during zip
         if ((user1 != user2) || (song1 != song2)) System.exit(2)
         // return (user, song, ranks linear combination)
@@ -329,13 +324,13 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     })
   }
 
-  def getLinearCombinationModelP(ubm: Array[(String, String, Double)],
-                                ibm: Array[(String, String, Double)],
+  def getLinearCombinationModelP(ubm: Array[(String, (String, Double))],
+                                ibm: Array[(String, (String, Double))],
                                 alpha: Double): ParArray[(String, (String, Double))] = {
     // zip lists to get a list of pairs ((user, song, rank_user), (user, song, rank_item))
     ubm.zip(ibm).par.map({
       // for each pair
-      case ((user1, song1, rank1), (user2, song2, rank2)) =>
+      case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
         if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
         // return (user, song, ranks linear combination)
         (user1, (song1, rank1 * alpha + rank2 * (1 - alpha)))
@@ -351,8 +346,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @param parallel            specify if the computation should be parallelized or not
    * @return the aggregation model
    */
-  def getAggregationModel(ubm: Array[(String, String, Double)],
-                          ibm: Array[(String, String, Double)],
+  def getAggregationModel(ubm: Array[(String, (String, Double))],
+                          ibm: Array[(String, (String, Double))],
                           itemBasedPercentage: Double = 0.5): Array[(String, (String, Double))] = {
 
     // exit if percentage is not in the range 0 <= p <= 1
@@ -367,7 +362,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     ubm.zip(ibm).zipWithIndex.map({
       // for each pair
       case (couple, index) => couple match {
-        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+        case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           // catch error during zip
           if ((user1 != user2) || (song1 != song2)) System.exit(2)
           // based on the percentage, take the rank of one model
@@ -378,8 +373,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
-  def getAggregationModelP(ubm: Array[(String, String, Double)],
-                          ibm: Array[(String, String, Double)],
+  def getAggregationModelP(ubm: Array[(String, (String, Double))],
+                          ibm: Array[(String, (String, Double))],
                           itemBasedPercentage: Double = 0.5): ParArray[(String, (String, Double))] = {
 
     // exit if percentage is not in the range 0 <= p <= 1
@@ -393,7 +388,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     ubm.zip(ibm).zipWithIndex.par.map({
       // for each pair
       case (couple, index) => couple match {
-        case ((user1, song1, rank1), (user2, song2, rank2)) =>
+        case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           // catch error during zip
           if ((user1 != user2) || (song1 != song2)) System.exit(2)
           // based on the percentage, take the rank of one model
@@ -412,8 +407,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @param parallel             specify if the computation should be parallelized or not
    * @return the stochastic combination model
    */
-  def getStochasticCombinationModel(ubm: Array[(String, String, Double)],
-                                    ibm: Array[(String, String, Double)],
+  def getStochasticCombinationModel(ubm: Array[(String, (String, Double))],
+                                    ibm: Array[(String, (String, Double))],
                                     itemBasedProbability: Double = 0.5): Array[(String, (String, Double))] = {
 
     // Exit if percentage is not in the range 0 <= p <= 1
@@ -426,7 +421,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
     ubm.zip(ibm).map({
       // for each pair
-      case ((user1, song1, rank1), (user2, song2, rank2)) =>
+      case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
         // catch error during zip
         if ((user1 != user2) || (song1 != song2)) System.exit(2)
         // based on the probability, take the rank of one model
@@ -436,8 +431,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
-  def getStochasticCombinationModelP(ubm: Array[(String, String, Double)],
-                                    ibm: Array[(String, String, Double)],
+  def getStochasticCombinationModelP(ubm: Array[(String, (String, Double))],
+                                    ibm: Array[(String, (String, Double))],
                                     itemBasedProbability: Double = 0.5): ParArray[(String, (String, Double))] = {
 
     // Exit if percentage is not in the range 0 <= p <= 1
@@ -449,7 +444,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
     ubm.zip(ibm).par.map({
       // for each pair
-      case ((user1, song1, rank1), (user2, song2, rank2)) =>
+      case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
         // catch error during zip
         if ((user1 != user2) || (song1 != song2)) System.exit(2)
         // based on the probability, take the rank of one model
@@ -465,7 +460,8 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
    * @param outputFileName the path to the file the model is being stored to
    */
   def writeModelOnFile(model: GenSeq[(String, (String, Double))], outputFileName: String = ""): Unit = {
-    val out = new PrintWriter(outputFileName)
+    val out = new PrintWriter(getClass.getClassLoader.getResource(outputFileName).getPath)
+
     model foreach (el => {
       out.write(s"${el._1}\t${el._2._1}\t${el._2._2}\n")
     })
@@ -587,7 +583,7 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     }
 
     if (parallel)
-      for {song <- newSongs.iterator.toSeq.par} yield {(song, singleAveragePrecision(song))}
+      for {song <- newSongs.par} yield {(song, singleAveragePrecision(song))}
     else
       for {song <- newSongs} yield {(song, singleAveragePrecision(song))}
   }

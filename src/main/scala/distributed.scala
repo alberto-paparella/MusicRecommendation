@@ -72,7 +72,10 @@ object distributed extends Serializable  {
     if (verbose) println("Loaded files")
 
     // instantiate spark context
-    val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
+    // local execution
+    // val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
+    // gcp execution
+    val conf = new SparkConf().setAppName("MusicRecommendation")
     val ctx = new SparkContext(conf)
 
     // store all songs from both files
@@ -103,17 +106,13 @@ object distributed extends Serializable  {
           mutUsersToSongsMap.update(u, s :: mutUsersToSongsMap.getOrElse(u, Nil))
           mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
       }
-      val usersToSongsMap: collection.mutable.Map[String, Array[String]] = mutUsersToSongsMap.map(entry => {
-        entry match {
-          case (k,v) => k -> v.toArray
-        }
-      })
+      val usersToSongsMap: collection.mutable.Map[String, Array[String]] = mutUsersToSongsMap.map {
+        case (k, v) => k -> v.toArray
+      }
 
-      finalSongsToUsersMap = mutSongsToUsersMap.map(entry => {
-        entry match {
-          case (k,v) => k -> v.toArray
-        }
-      })
+      finalSongsToUsersMap = mutSongsToUsersMap.map {
+        case (k, v) => k -> v.toArray
+      }
 
       (usersInFile.toArray, usersToSongsMap.toMap)
     }
@@ -147,11 +146,9 @@ object distributed extends Serializable  {
           // update map
           mutTestLabels.update(u, s :: mutTestLabels.getOrElse(u, Nil))
       }
-      val testLabels: Map[String, Array[String]] = mutTestLabels.map(entry => {
-        entry match {
-          case (key, value) => key -> value.toArray
-        }
-      }).toMap
+      val testLabels: Map[String, Array[String]] = mutTestLabels.map {
+        case (key, value) => key -> value.toArray
+      }.toMap
       (testLabels, newSongs.toArray)
     }
 
@@ -333,11 +330,9 @@ object distributed extends Serializable  {
           if ((el._2._2 - min) / (max - min) > threshold) predictions.update(el._1, el._2._1 :: predictions.getOrElse(el._1, Nil))
         })
 
-        val preds: collection.mutable.Map[String, Array[String]] = predictions.map(c => {
-          c match {
-            case (k,v) => k -> v.toArray
-          }
-        })
+        val preds: collection.mutable.Map[String, Array[String]] = predictions.map {
+          case (k, v) => k -> v.toArray
+        }
 
         preds.toMap
       }
@@ -431,7 +426,8 @@ object distributed extends Serializable  {
        */
       def meanAveragePrecision(model: Array[(String, (String, Double))]): Double = {
         //averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
-        averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
+        //averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
+        averagePrecision(model).map(ap => ap._2).sum / newSongs.length
       }
 
       /**
@@ -598,10 +594,10 @@ object distributed extends Serializable  {
       MyUtils.time(EvaluationFunctions.evaluateModel(aModel),  "(Distributed) aggregation model mAP"),
       MyUtils.time(EvaluationFunctions.evaluateModel(scModel), "(Distributed) stochastic-combination model mAP")
      )
-    println("(Distributed) user-based model mAP: " + mAP)
-    //println("(Distributed) item-based model mAP: " + mAP._2)
-    //println("(Distributed) linear-combination model mAP: " + mAP._3)
-    //println("(Distributed) aggregation model model mAP: " + mAP._4)
-    //println("(Distributed) stochastic-combination model mAP: " + mAP._5)
+    println("(Distributed) user-based model mAP: " + MyUtils.roundAt(10, mAP._1))
+    println("(Distributed) item-based model mAP: " + MyUtils.roundAt(10, mAP._2))
+    println("(Distributed) linear-combination model mAP: " + MyUtils.roundAt(10, mAP._3))
+    println("(Distributed) aggregation model model mAP: " + MyUtils.roundAt(10, mAP._4))
+    println("(Distributed) stochastic-combination model mAP: " + MyUtils.roundAt(10, mAP._5))
   }
 }

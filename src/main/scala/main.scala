@@ -48,14 +48,17 @@ object main {
       )
 
     // saving models to file (both sequential and parallel)
-    musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
-    musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
+    //musicRecommender.writeModelOnFile(userBasedModel, "models/userBasedModel.txt")
+    //musicRecommender.writeModelOnFile(userBasedModelP, "models/userBasedModelP.txt")
     musicRecommender.writeModelOnFile(itemBasedModel, "models/itemBasedModel.txt")
-    musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
+    //musicRecommender.writeModelOnFile(itemBasedModelP, "models/itemBasedModelP.txt")
 
     // importing models from file (in case you wanna skip/separate execution wrt ubm and ibm)
-    val ubm = musicRecommender.importModelFromFile("models/userBasedModel.txt")
-    val ibm = musicRecommender.importModelFromFile("models/itemBasedModel.txt")
+    //val ubm = musicRecommender.importModelFromFile("models/userBasedModel.txt")
+    //val ibm = musicRecommender.importModelFromFile("models/itemBasedModel.txt")
+    val ordering = Ordering.Tuple2(Ordering.String, Ordering.Tuple2(Ordering.String, Ordering.Double.reverse))
+    val ubm = userBasedModel sorted ordering
+    val ibm = itemBasedModel sorted ordering
 
     // calculating combination models (both sequential and parallel)
     val (
@@ -88,12 +91,12 @@ object main {
       )
 
     // saving models to file (both sequential and parallel)
-    musicRecommender.writeModelOnFile(linearCombinationModel, "models/linearCombinationModel.txt")
-    musicRecommender.writeModelOnFile(linearCombinationModelP, "models/linearCombinationModelP.txt")
-    musicRecommender.writeModelOnFile(aggregationModel, "models/aggregationModel.txt")
-    musicRecommender.writeModelOnFile(aggregationModelP, "models/aggregationModelP.txt")
-    musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
-    musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
+    //musicRecommender.writeModelOnFile(linearCombinationModel, "models/linearCombinationModel.txt")
+    //musicRecommender.writeModelOnFile(linearCombinationModelP, "models/linearCombinationModelP.txt")
+    //musicRecommender.writeModelOnFile(aggregationModel, "models/aggregationModel.txt")
+    //musicRecommender.writeModelOnFile(aggregationModelP, "models/aggregationModelP.txt")
+    //musicRecommender.writeModelOnFile(stochasticCombinationModel, "models/stochasticCombinationModel.txt")
+    //musicRecommender.writeModelOnFile(stochasticCombinationModelP, "models/stochasticCombinationModelP.txt")
 
     // evaluating models; mAP should be the same between sequential and parallel, except for stochasticCombinationModel
     val mAP = (
@@ -108,16 +111,16 @@ object main {
       MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModel),"(Sequential) stochastic-combination model mAP"),
       MyUtils.time(musicRecommender.evaluateModel(stochasticCombinationModelP, parallel=true),"(Parallel) stochastic-combination model mAP")
     )
-    println("(Sequential) user-based model mAP: " + mAP._1)
-    println("(Parallel) user-based model mAP: " + mAP._2)
-    println("(Sequential) item-based model mAP: " + mAP._3)
-    println("(Parallel) item-based model mAP: " + mAP._4)
-    println("(Sequential) linear-combination model mAP: " + mAP._5)
-    println("(Parallel) linear-combination model mAP: " + mAP._6)
-    println("(Sequential) aggregation model model mAP: " + mAP._7)
-    println("(Parallel) aggregation model mAP: " + mAP._8)
-    println("(Sequential) stochastic-combination model mAP: " + mAP._9)
-    println("(Parallel) stochastic-combination model mAP: " + mAP._10)
+    println("(Sequential) user-based model mAP: " + MyUtils.roundAt(10, mAP._1))
+    println("(Parallel) user-based model mAP: " + MyUtils.roundAt(10, mAP._2))
+    println("(Sequential) item-based model mAP: " + MyUtils.roundAt(10, mAP._3))
+    println("(Parallel) item-based model mAP: " + MyUtils.roundAt(10, mAP._4))
+    println("(Sequential) linear-combination model mAP: " + MyUtils.roundAt(10, mAP._5))
+    println("(Parallel) linear-combination model mAP: " + MyUtils.roundAt(10, mAP._6))
+    println("(Sequential) aggregation model model mAP: " + MyUtils.roundAt(10, mAP._7))
+    println("(Parallel) aggregation model mAP: " + MyUtils.roundAt(10, mAP._8))
+    println("(Sequential) stochastic-combination model mAP: " + MyUtils.roundAt(10, mAP._9))
+    println("(Parallel) stochastic-combination model mAP: " + MyUtils.roundAt(10, mAP._10))
 
   }
 }
