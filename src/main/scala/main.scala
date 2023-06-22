@@ -1,7 +1,9 @@
 import music_recommandation.MusicRecommender
 import my_utils.MyUtils
+import org.apache.avro.generic.GenericArray
 
 import scala.collection.GenSeq
+import scala.collection.parallel.mutable.ParArray
 import scala.io._
 import scala.language._
 
@@ -29,20 +31,20 @@ object main {
 
     // calculating models (both sequential and parallel)
     val (
-      userBasedModel: GenSeq[(String, (String, Double))],
-      userBasedModelP: GenSeq[(String, (String, Double))],
-      itemBasedModel: GenSeq[(String, (String, Double))],
-      itemBasedModelP: GenSeq[(String, (String, Double))]
+      userBasedModel: Array[(String, (String, Double))],
+      userBasedModelP: ParArray[(String, (String, Double))],
+      itemBasedModel: Array[(String, (String, Double))],
+      itemBasedModelP: ParArray[(String, (String, Double))]
       ) = if (verbose) (
-        MyUtils.time(musicRecommender.getUserBasedModel(parallel=false), "(Sequential) user-based model"),
-        MyUtils.time(musicRecommender.getUserBasedModel(parallel=true), "(Parallel) user-based model"),
-        MyUtils.time(musicRecommender.getItemBasedModel(parallel = false), "(Sequential) item-based model"),
-        MyUtils.time(musicRecommender.getItemBasedModel(parallel = true), "(Parallel) item-based model")
+        MyUtils.time(musicRecommender.getUserBasedModel(), "(Sequential) user-based model"),
+        MyUtils.time(musicRecommender.getUserBasedModelP(), "(Parallel) user-based model"),
+        MyUtils.time(musicRecommender.getItemBasedModel(), "(Sequential) item-based model"),
+        MyUtils.time(musicRecommender.getItemBasedModelP(), "(Parallel) item-based model")
       ) else (
-        musicRecommender.getUserBasedModel(parallel=false),
-        musicRecommender.getUserBasedModel(parallel=true),
-        musicRecommender.getItemBasedModel(parallel = false),
-        musicRecommender.getItemBasedModel(parallel = true)
+        musicRecommender.getUserBasedModel(),
+        musicRecommender.getUserBasedModelP(),
+        musicRecommender.getItemBasedModel(),
+        musicRecommender.getItemBasedModelP()
       )
 
     // saving models to file (both sequential and parallel)
@@ -57,32 +59,32 @@ object main {
 
     // calculating combination models (both sequential and parallel)
     val (
-      linearCombinationModel: GenSeq[(String, (String, Double))],
-      linearCombinationModelP: GenSeq[(String, (String, Double))],
-      aggregationModel: GenSeq[(String, (String, Double))],
-      aggregationModelP: GenSeq[(String, (String, Double))],
-      stochasticCombinationModel: GenSeq[(String, (String, Double))],
-      stochasticCombinationModelP: GenSeq[(String, (String, Double))]
+      linearCombinationModel: Array[(String, (String, Double))],
+      linearCombinationModelP: ParArray[(String, (String, Double))],
+      aggregationModel: Array[(String, (String, Double))],
+      aggregationModelP: ParArray[(String, (String, Double))],
+      stochasticCombinationModel: Array[(String, (String, Double))],
+      stochasticCombinationModelP: ParArray[(String, (String, Double))]
       ) = if (verbose) (
-        MyUtils.time(musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5, parallel=false),
+        MyUtils.time(musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5),
           "(Sequential) linear-combination model"),
-        MyUtils.time(musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5, parallel=true),
+        MyUtils.time(musicRecommender.getLinearCombinationModelP(ubm, ibm, 0.5),
           "(Parallel) linear-combination model"),
-        MyUtils.time(musicRecommender.getAggregationModel(ubm, ibm,0.5,parallel=false),
+        MyUtils.time(musicRecommender.getAggregationModel(ubm, ibm,0.5),
           "(Sequential) aggregation model"),
-        MyUtils.time( musicRecommender.getAggregationModel(ubm, ibm,0.5,parallel=true),
+        MyUtils.time( musicRecommender.getAggregationModelP(ubm, ibm,0.5),
           "(Parallel) aggregation model"),
-        MyUtils.time(musicRecommender.getStochasticCombinationModel(ubm, ibm,0.5,parallel=false),
+        MyUtils.time(musicRecommender.getStochasticCombinationModel(ubm, ibm,0.5),
           "(Sequential) stochastic-combination model"),
-        MyUtils.time(musicRecommender.getStochasticCombinationModel(ubm, ibm, 0.5, parallel = true),
+        MyUtils.time(musicRecommender.getStochasticCombinationModelP(ubm, ibm, 0.5),
           "(Parallel) stochastic-combination model")
       ) else (
-        musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5, parallel = false),
-        musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5, parallel = true),
-        musicRecommender.getAggregationModel(ubm, ibm, 0.5, parallel = false),
-        musicRecommender.getAggregationModel(ubm, ibm, 0.5, parallel = true),
-        musicRecommender.getStochasticCombinationModel(ubm, ibm, 0.5, parallel = false),
-        musicRecommender.getStochasticCombinationModel(ubm, ibm, 0.5, parallel = true)
+        musicRecommender.getLinearCombinationModel(ubm, ibm, 0.5),
+        musicRecommender.getLinearCombinationModelP(ubm, ibm, 0.5),
+        musicRecommender.getAggregationModel(ubm, ibm, 0.5),
+        musicRecommender.getAggregationModelP(ubm, ibm, 0.5),
+        musicRecommender.getStochasticCombinationModel(ubm, ibm, 0.5),
+        musicRecommender.getStochasticCombinationModelP(ubm, ibm, 0.5)
       )
 
     // saving models to file (both sequential and parallel)

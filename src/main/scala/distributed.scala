@@ -3,11 +3,13 @@ import my_utils.MyUtils
 import java.io.{PrintWriter, Serializable}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+
 import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
 import scala.collection.parallel.ParSeq
+import scala.collection.parallel.mutable.ParArray
 
 object distributed extends Serializable  {
 
@@ -38,10 +40,10 @@ object distributed extends Serializable  {
    * @param pathToModel the path to the file containing the model
    * @return the model
    */
-  private def importModel(pathToModel: String): Seq[(String, String, Double)] = {
+  private def importModel(pathToModel: String): Array[(String, String, Double)] = {
     def modelFile: BufferedSource = Source.fromResource(pathToModel)
     val ordering = Ordering.Tuple3(Ordering.String, Ordering.String, Ordering.Double.reverse)
-    val model = modelFile.getLines().toList map (line => line split "\t" match {
+    val model = modelFile.getLines().toArray map (line => line split "\t" match {
       case Array(users, songs, ranks) => (users, songs, ranks.toDouble)
     }) sorted ordering
     model
@@ -70,25 +72,25 @@ object distributed extends Serializable  {
     if (verbose) println("Loaded files")
 
     // instantiate spark context
-    val conf = new SparkConf().setAppName("MusicRecommendation")
+    val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     val ctx = new SparkContext(conf)
 
     // store all songs from both files
     val mutSongs = collection.mutable.Set[String]()
     // map song1->[{users who listened to song1}], ..., songN->[{users who listened to songN}]
     val mutSongsToUsersMap = collection.mutable.Map[String, List[String]]()
-
+    var finalSongsToUsersMap = collection.mutable.Map[String, Array[String]]()
     /**
      * Read file containing the data storing them in their relative structures
      *
      * @param in file containing the data
      * @return list of users in the file and map of list of songs for each user
      */
-    def extractData(in: BufferedSource): (Seq[String], Map[String, List[String]]) = {
+    def extractData(in: BufferedSource): (Array[String], Map[String, Array[String]]) = {
       // all users in file
       val usersInFile = collection.mutable.Set[String]()
       // map user1->[{songs listened by user1}], ..., userN->[{songs listened by userN}]
-      val usersToSongsMap = collection.mutable.Map[String, List[String]]()
+      val mutUsersToSongsMap = collection.mutable.Map[String, List[String]]()
       // for each split line on "\t"
       for {
         line <- in.getLines().toList
@@ -98,19 +100,31 @@ object distributed extends Serializable  {
           usersInFile add u
           mutSongs add s
           // update maps
-          usersToSongsMap.update(u, s :: usersToSongsMap.getOrElse(u, Nil))
+          mutUsersToSongsMap.update(u, s :: mutUsersToSongsMap.getOrElse(u, Nil))
           mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
       }
-      (usersInFile.toSeq, usersToSongsMap.toMap)
+      val usersToSongsMap: collection.mutable.Map[String, Array[String]] = mutUsersToSongsMap.map(entry => {
+        entry match {
+          case (k,v) => k -> v.toArray
+        }
+      })
+
+      finalSongsToUsersMap = mutSongsToUsersMap.map(entry => {
+        entry match {
+          case (k,v) => k -> v.toArray
+        }
+      })
+
+      (usersInFile.toArray, usersToSongsMap.toMap)
     }
 
     // get train and test data from files
     val (trainUsers, trainUsersToSongsMap) = extractData(train)
     val (testUsers, testUsersToSongsMap) = extractData(test)
     // convert mutable to immutable list
-    val songs: Seq[String] = mutSongs.toSeq
+    val songs: Array[String] = mutSongs.toArray
     // convert mutable to immutable map
-    val songsToUsersMap = mutSongsToUsersMap.toMap
+    val songsToUsersMap: Map[String, Array[String]] = finalSongsToUsersMap.toMap
 
     if (verbose) println("Songs: " + songs.length)
 
@@ -120,8 +134,8 @@ object distributed extends Serializable  {
      * @param in file containing the test labels data
      * @return a map representing for each test user the latter half of its music history (i.e., the ground truth)
      */
-    def importTestLabels(in: BufferedSource): (Map[String, List[String]], List[String]) = {
-      val testLabels = collection.mutable.Map[String, List[String]]()
+    def importTestLabels(in: BufferedSource): (Map[String, Array[String]], Array[String]) = {
+      val mutTestLabels = collection.mutable.Map[String, List[String]]()
       val newSongs = collection.mutable.Set[String]()
       // for each split line on "\t"
       for {
@@ -131,9 +145,14 @@ object distributed extends Serializable  {
           // users are the same as in testUsers, while testLabels could contain new songs
           newSongs add s
           // update map
-          testLabels.update(u, s :: testLabels.getOrElse(u, Nil))
+          mutTestLabels.update(u, s :: mutTestLabels.getOrElse(u, Nil))
       }
-      (testLabels.toMap, newSongs.toList)
+      val testLabels: Map[String, Array[String]] = mutTestLabels.map(entry => {
+        entry match {
+          case (key, value) => key -> value.toArray
+        }
+      }).toMap
+      (testLabels, newSongs.toArray)
     }
 
     // validation data (import just once at initialization)
@@ -178,10 +197,10 @@ object distributed extends Serializable  {
        * @param user the user
        * @return the rank for each song for the user
        */
-      def getRanks1(user: String):ParSeq[(String, (String, Double))] = {
+      def getRanks1(user: String): ParArray[(String, (String, Double))] = {
         // foreach song, calculate the score for the user
         for {
-          song <- songs.iterator.toSeq.par filter (song => !testUsersToSongsMap(user).contains(song))
+          song <- songs.par filter (song => !testUsersToSongsMap(user).contains(song))
         } yield {
           user -> (song, rank(user, song))
         }
@@ -194,10 +213,10 @@ object distributed extends Serializable  {
        * @param song the song
        * @return the rank for the song for each user
        */
-      def getRanks2(song: String): ParSeq[(String, (String, Double))] = {
+      def getRanks2(song: String): ParArray[(String, (String, Double))] = {
         // foreach user, calculate the score for the user
         for {
-          user <- testUsers.iterator.toSeq.par filter (user => !testUsersToSongsMap(user).contains(song))
+          user <- testUsers.par filter (user => !testUsersToSongsMap(user).contains(song))
         } yield {
           user -> (song, rank(user, song))
         }
@@ -249,10 +268,10 @@ object distributed extends Serializable  {
        * @param user the user
        * @return the rank for each song for the user
        */
-      def getRanks1(user: String): ParSeq[(String, (String, Double))] = {
+      def getRanks1(user: String): ParArray[(String, (String, Double))] = {
         // foreach song, calculate the score for the user
         for {
-          s <- songs.iterator.toSeq.par filter (s => !testUsersToSongsMap(user).contains(s))
+          s <- songs.par filter (s => !testUsersToSongsMap(user).contains(s))
         } yield {
           user -> (s, rank(user, s))
         }
@@ -265,10 +284,10 @@ object distributed extends Serializable  {
        * @param song the song
        * @return the rank for the song for each user
        */
-      def getRanks2(song: String): ParSeq[(String, (String, Double))] = {
+      def getRanks2(song: String): ParArray[(String, (String, Double))] = {
         // foreach user, calculate the score for the user
         for {
-          user <- testUsers.iterator.toSeq.par filter (user => !testUsersToSongsMap(user).contains(song))
+          user <- testUsers.par filter (user => !testUsersToSongsMap(user).contains(song))
         } yield {
           user -> (song, rank(user, song))
         }
@@ -303,7 +322,7 @@ object distributed extends Serializable  {
        * @param threshold _ > threshold = 1, _ <= threshold = 0 (default 0.0)
        * @return map of list of songs the user will listen predicted by the model for each user
        */
-      def predictionToClassLabels(model: Array[(String,(String, Double))], threshold: Double = 0.0): Map[String, List[String]] = {
+      def predictionToClassLabels(model: Array[(String,(String, Double))], threshold: Double = 0.0): Map[String, Array[String]] = {
         // model contains the prediction scores for test users
         val predictions = collection.mutable.Map[String, List[String]]()
         val min = model.map(el => el._2._2).min
@@ -313,7 +332,14 @@ object distributed extends Serializable  {
           // values can be greater than 1, therefore normalization is advised
           if ((el._2._2 - min) / (max - min) > threshold) predictions.update(el._1, el._2._1 :: predictions.getOrElse(el._1, Nil))
         })
-        predictions.toMap
+
+        val preds: collection.mutable.Map[String, Array[String]] = predictions.map(c => {
+          c match {
+            case (k,v) => k -> v.toArray
+          }
+        })
+
+        preds.toMap
       }
 
       /**
@@ -323,7 +349,7 @@ object distributed extends Serializable  {
        * @param song        the class over we are calculating the confusion matrix
        * @return the confusion matrix for a specific class song
        */
-      def confusionMatrix(predictions: Map[String, List[String]], song: String): (Int, Int, Int, Int) = {
+      def confusionMatrix(predictions: Map[String, Array[String]], song: String): (Int, Int, Int, Int) = {
         // NB: if threshold too high, user could not be in predictions!
         testUsers.map(user => (
           // True positives
@@ -370,7 +396,7 @@ object distributed extends Serializable  {
        * @return a list containing the average precisions for each class (i.e., each song)
        */
       def averagePrecision(model: Array[(String, (String, Double))]): RDD[(String, Double)] = {
-        val thresholds = 0.0 :: 0.1 :: 0.2 :: 0.3 :: 0.4 :: 0.5 :: 0.6 :: 0.7 :: 0.8 :: 0.9 :: 1.0 :: Nil
+        val thresholds: Array[Double] = Array(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
         // predictions = (threshold) -> (user -> list of songs)
         val predictions = for {t <- thresholds} yield {
           predictionToClassLabels(model, t)
@@ -528,7 +554,7 @@ object distributed extends Serializable  {
     }
 
     // songs >> users, nodes << cores per node (or songs << users, nodes >> cores per node)
-    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based")
+    val ubModel = MyUtils.time(getUserBasedModel2, "(Distributed) user-based")
     val ibModel = MyUtils.time(getItemBasedModel1, "(Distributed) item-based")
 
     // songs >> users, nodes >> cores per node (or songs << users, nodes << cores per node)
@@ -572,10 +598,10 @@ object distributed extends Serializable  {
       MyUtils.time(EvaluationFunctions.evaluateModel(aModel),  "(Distributed) aggregation model mAP"),
       MyUtils.time(EvaluationFunctions.evaluateModel(scModel), "(Distributed) stochastic-combination model mAP")
      )
-    println("(Distributed) user-based model mAP: " + mAP._1)
-    println("(Distributed) item-based model mAP: " + mAP._2)
-    println("(Distributed) linear-combination model mAP: " + mAP._3)
-    println("(Distributed) aggregation model model mAP: " + mAP._4)
-    println("(Distributed) stochastic-combination model mAP: " + mAP._5)
+    println("(Distributed) user-based model mAP: " + mAP)
+    //println("(Distributed) item-based model mAP: " + mAP._2)
+    //println("(Distributed) linear-combination model mAP: " + mAP._3)
+    //println("(Distributed) aggregation model model mAP: " + mAP._4)
+    //println("(Distributed) stochastic-combination model mAP: " + mAP._5)
   }
 }
