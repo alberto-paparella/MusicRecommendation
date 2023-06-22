@@ -9,10 +9,11 @@ analysis of the behaviours of these algorithms across the different executions.
 The different algorithms produced can be found in the `src/main/scala/` directory as scala worksheet
 files. To execute the algorithms, one should download the <b>Echo Nest Taste Profile Subset</b> dataset from
 http://millionsongdataset.com/tasteprofile/ and place the `train_triplets.txt` file under the `src/main/resources/`
-directory. Once executed, the results of the training will be available through a text file with the same name of the
-algorithm which can be found under `target/scala-2.13/classes/models/`. Make sure to also have an empty file in
+directory (we advise working on a subset of it; `dataAnalysis.ipynb` can be an useful tool to do that).
+Once executed, the results of the training will be available through a text file with the same name of the
+algorithm which can be found under `target/scala-2.12/classes/models/`. Make sure to also have an empty file in
 `src/main/resources/models/` with the same name of the model (in case not, create it, as it will be used to dynamically
-create the path for the output model, which will still be found under the `target/scala-2.13/classes/models/` path).
+create the path for the output model, which will still be found under the `target/scala-2.12/classes/models/` path).
 
 We plan to implement the following algorithms:
 - UserBasedModel
