@@ -125,6 +125,9 @@ object distributed extends Serializable  {
     // convert mutable to immutable map
     val songsToUsersMap: Map[String, Array[String]] = finalSongsToUsersMap.toMap
 
+    val slicesRatio: Integer = 100
+    val numberSlices: Integer = songs.length / slicesRatio
+
     if (verbose) println("Songs: " + songs.length)
 
     /**
@@ -155,7 +158,7 @@ object distributed extends Serializable  {
     // validation data (import just once at initialization)
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // parallelized here because SparkContext cannot be serialized (e.g. inside averagePrecision function)
-    val newSongsRdd = ctx.parallelize(newSongs)
+    val newSongsRdd = ctx.parallelize(newSongs, newSongs.length/slicesRatio)
 
     if (verbose) println("New songs: " + newSongs.length)
 
@@ -448,7 +451,7 @@ object distributed extends Serializable  {
      * @return user based model
      */
     def getUserBasedModel1: Array[(String, (String, Double))] = {
-      ctx.parallelize(testUsers, 100).map(user => UserBasedModel.getRanks1(user).seq).collect.flatten
+      ctx.parallelize(testUsers, slicesRatio).map(user => UserBasedModel.getRanks1(user).seq).collect.flatten
     }
 
     /**
@@ -457,7 +460,7 @@ object distributed extends Serializable  {
      * @return user based model
      */
     def getUserBasedModel2: Array[(String, (String, Double))] = {
-      ctx.parallelize(songs).map(song => UserBasedModel.getRanks2(song).seq).collect.flatten
+      ctx.parallelize(songs, slicesRatio).map(song => UserBasedModel.getRanks2(song).seq).collect.flatten
     }
 
     /**
@@ -466,7 +469,7 @@ object distributed extends Serializable  {
      * @return item based model
      */
     def getItemBasedModel1: Array[(String, (String, Double))] = {
-      ctx.parallelize(testUsers).map(user => ItemBasedModel.getRanks1(user).seq).collect.flatten
+      ctx.parallelize(testUsers, slicesRatio).map(user => ItemBasedModel.getRanks1(user).seq).collect.flatten
     }
 
     /**
@@ -475,7 +478,7 @@ object distributed extends Serializable  {
      * @return item based model
      */
     def getItemBasedModel2: Array[(String, (String, Double))] = {
-      ctx.parallelize(songs, 100).map(song => ItemBasedModel.getRanks2(song).seq).collect.flatten
+      ctx.parallelize(songs, slicesRatio).map(song => ItemBasedModel.getRanks2(song).seq).collect.flatten
     }
 
     /**
@@ -490,7 +493,7 @@ object distributed extends Serializable  {
                                   ibm: Array[(String, (String, Double))],
                                   alpha: Double = 0.5): Array[(String, (String, Double))] = {
 
-      ctx.parallelize(ubm.zip(ibm), 100) map {
+      ctx.parallelize(ubm.zip(ibm), slicesRatio) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
@@ -514,7 +517,7 @@ object distributed extends Serializable  {
       val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-      ctx.parallelize(ubm.zip(ibm).zipWithIndex, 100) map{
+      ctx.parallelize(ubm.zip(ibm).zipWithIndex, slicesRatio) map{
         // for each pair
         case (couple, index) => couple match {
           case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
@@ -539,7 +542,7 @@ object distributed extends Serializable  {
                            itemBasedProbability: Double = 0.5): Array[(String, (String, Double))] = {
       val random = new Random
       // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-      ctx.parallelize(ubm.zip(ibm), 1000) map {
+      ctx.parallelize(ubm.zip(ibm), slicesRatio) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
@@ -550,12 +553,12 @@ object distributed extends Serializable  {
     }
 
     // songs >> users, nodes << cores per node (or songs << users, nodes >> cores per node)
-    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based")
-    val ibModel = MyUtils.time(getItemBasedModel2, "(Distributed) item-based")
+    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based1")
+    val ibModel = MyUtils.time(getItemBasedModel1, "(Distributed) item-based1")
 
     // songs >> users, nodes >> cores per node (or songs << users, nodes << cores per node)
-    //val ubModel = MyUtils.time(getUserBasedModel2, "(Distributed) user-based")
-    //val ibModel = MyUtils.time(getItemBasedModel2, "(Distributed) item-based")
+    val ubModel2 = MyUtils.time(getUserBasedModel2, "(Distributed) user-based2")
+    val ibModel2 = MyUtils.time(getItemBasedModel2, "(Distributed) item-based2")
 
     /*
     // saving models to file
