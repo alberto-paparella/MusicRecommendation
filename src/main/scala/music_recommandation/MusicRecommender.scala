@@ -41,11 +41,9 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
         mutSongsToUsersMap.update(s, u :: mutSongsToUsersMap.getOrElse(s, Nil))
     }
 
-    val usersToSongsMap: collection.mutable.Map[String, Array[String]] = mutUsersToSongsMap.map(entry => {
-      entry match {
-        case (k, v) => k -> v.toArray
-      }
-    })
+    val usersToSongsMap: collection.mutable.Map[String, Array[String]] = mutUsersToSongsMap.map {
+      case (k, v) => k -> v.toArray
+    }
     (usersInFile.toArray, usersToSongsMap.toMap)
   }
 
@@ -127,12 +125,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   }
 
   /**
-   * Get the user based model (i.e., using the cosine similarity between two users as rank function)
+   * (Sequential version) Get the user based model (i.e., using the cosine similarity between two users as rank function)
    *
-   * @param parallel specify if the computation should be parallelized or not
    * @return the user based model
    */
-  def getUserBasedModel(): Array[(String, (String, Double))]  = {
+  def getUserBasedModel: Array[(String, (String, Double))]  = {
     /**
      * Get the cosine similarity between two users
      *
@@ -172,7 +169,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     getModel(rank)
   }
 
-  def getUserBasedModelP(): ParArray[(String, (String, Double))] = {
+  /**
+   * (Parallel version) Get the user based model (i.e., using the cosine similarity between two users as rank function)
+   *
+   * @return the user based model
+   */
+  def getUserBasedModelP: ParArray[(String, (String, Double))] = {
     /**
      * Get the cosine similarity between two users
      *
@@ -213,12 +215,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   }
 
   /**
-   * Get the item based model (i.e., using the cosine similarity between two songs as rank function)
+   * (Sequential version) Get the item based model (i.e., using the cosine similarity between two songs as rank function)
    *
-   * @param parallel specify if the computation should be parallelized or not
    * @return the user item model
    */
-  def getItemBasedModel(): Array[(String, (String, Double))] = {
+  def getItemBasedModel: Array[(String, (String, Double))] = {
     /**
      * Get the cosine similarity between two songs
      *
@@ -259,7 +260,12 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     getModel(rank)
   }
 
-  def getItemBasedModelP(): ParArray[(String, (String, Double))] = {
+  /**
+   * (Parallel version) Get the item based model (i.e., using the cosine similarity between two songs as rank function)
+   *
+   * @return the user item model
+   */
+  def getItemBasedModelP: ParArray[(String, (String, Double))] = {
     /**
      * Get the cosine similarity between two songs
      *
@@ -301,12 +307,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   }
 
   /**
-   * Calculate linear combination model given the user and the item based models and an alpha parameter
+   * (Sequential version) Calculate linear combination model given the user and the item based models and an alpha parameter
    *
    * @param ubm      the user based model
    * @param ibm      the item based model
    * @param alpha    weight of the contribute of the user based model; ibm will be weighted accordingly (lcAlpha - 1)
-   * @param parallel specify if the computation should be parallelized or not
    * @return the linear combination model
    */
   def getLinearCombinationModel(ubm: Array[(String, (String, Double))],
@@ -324,6 +329,14 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
     })
   }
 
+  /**
+   * (Parallel version) Calculate linear combination model given the user and the item based models and an alpha parameter
+   *
+   * @param ubm   the user based model
+   * @param ibm   the item based model
+   * @param alpha weight of the contribute of the user based model; ibm will be weighted accordingly (lcAlpha - 1)
+   * @return the linear combination model
+   */
   def getLinearCombinationModelP(ubm: Array[(String, (String, Double))],
                                 ibm: Array[(String, (String, Double))],
                                 alpha: Double): ParArray[(String, (String, Double))] = {
@@ -338,12 +351,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   }
 
   /**
-   * Calculate aggregation model given the user and the item based models and an itemBasedPercentage parameter
+   * (Sequential version) Calculate aggregation model given the user and the item based models and an itemBasedPercentage parameter
    *
    * @param ubm                 the user based model
    * @param ibm                 the item based model
    * @param itemBasedPercentage how many ranks are taken from ubm and ibm
-   * @param parallel            specify if the computation should be parallelized or not
    * @return the aggregation model
    */
   def getAggregationModel(ubm: Array[(String, (String, Double))],
@@ -373,6 +385,14 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
+  /**
+   * (Parallel version) Calculate aggregation model given the user and the item based models and an itemBasedPercentage parameter
+   *
+   * @param ubm                 the user based model
+   * @param ibm                 the item based model
+   * @param itemBasedPercentage how many ranks are taken from ubm and ibm
+   * @return the aggregation model
+   */
   def getAggregationModelP(ubm: Array[(String, (String, Double))],
                           ibm: Array[(String, (String, Double))],
                           itemBasedPercentage: Double = 0.5): ParArray[(String, (String, Double))] = {
@@ -399,12 +419,11 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
   }
 
   /**
-   * Calculate stochastic combination model given the user and the item based models and an itemBasedProbability parameter
+   * (Sequential version) Calculate stochastic combination model given the user and the item based models and an itemBasedProbability parameter
    *
    * @param ubm                  the user based model
    * @param ibm                  the item based model
    * @param itemBasedProbability threshold over which ranks are chosen from ibm model
-   * @param parallel             specify if the computation should be parallelized or not
    * @return the stochastic combination model
    */
   def getStochasticCombinationModel(ubm: Array[(String, (String, Double))],
@@ -431,6 +450,14 @@ class MusicRecommender(trainFile: BufferedSource, testFile: BufferedSource, test
 
   }
 
+  /**
+   * (Parallel version) Calculate stochastic combination model given the user and the item based models and an itemBasedProbability parameter
+   *
+   * @param ubm                  the user based model
+   * @param ibm                  the item based model
+   * @param itemBasedProbability threshold over which ranks are chosen from ibm model
+   * @return the stochastic combination model
+   */
   def getStochasticCombinationModelP(ubm: Array[(String, (String, Double))],
                                     ibm: Array[(String, (String, Double))],
                                     itemBasedProbability: Double = 0.5): ParArray[(String, (String, Double))] = {

@@ -8,7 +8,6 @@ import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
-import scala.collection.parallel.ParSeq
 import scala.collection.parallel.mutable.ParArray
 
 object distributed extends Serializable  {
@@ -62,7 +61,7 @@ object distributed extends Serializable  {
     def trainUsersN: Integer = if (args.length >= 2) args(0).toInt else 100
     def testUsersN: Integer = if (args.length >= 2) args(1).toInt else 10
 
-    if (verbose) println(s"Train users: ${trainUsersN}\nTest users: ${testUsersN}")
+    if (verbose) println(s"Train users: $trainUsersN\nTest users: $testUsersN")
 
     // import train and test datasets
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
@@ -158,7 +157,7 @@ object distributed extends Serializable  {
     // validation data (import just once at initialization)
     val (testLabels, newSongs) = importTestLabels(testLabelsFile)
     // parallelized here because SparkContext cannot be serialized (e.g. inside averagePrecision function)
-    val newSongsRdd = ctx.parallelize(newSongs, newSongs.length/slicesRatio)
+    val newSongsRdd = ctx.parallelize(newSongs, newSongs.length/numberSlices)
 
     if (verbose) println("New songs: " + newSongs.length)
 
@@ -451,7 +450,7 @@ object distributed extends Serializable  {
      * @return user based model
      */
     def getUserBasedModel1: Array[(String, (String, Double))] = {
-      ctx.parallelize(testUsers, slicesRatio).map(user => UserBasedModel.getRanks1(user).seq).collect.flatten
+      ctx.parallelize(testUsers, numberSlices).map(user => UserBasedModel.getRanks1(user).seq).collect.flatten
     }
 
     /**
@@ -460,7 +459,7 @@ object distributed extends Serializable  {
      * @return user based model
      */
     def getUserBasedModel2: Array[(String, (String, Double))] = {
-      ctx.parallelize(songs, slicesRatio).map(song => UserBasedModel.getRanks2(song).seq).collect.flatten
+      ctx.parallelize(songs, numberSlices).map(song => UserBasedModel.getRanks2(song).seq).collect.flatten
     }
 
     /**
@@ -469,7 +468,7 @@ object distributed extends Serializable  {
      * @return item based model
      */
     def getItemBasedModel1: Array[(String, (String, Double))] = {
-      ctx.parallelize(testUsers, slicesRatio).map(user => ItemBasedModel.getRanks1(user).seq).collect.flatten
+      ctx.parallelize(testUsers, numberSlices).map(user => ItemBasedModel.getRanks1(user).seq).collect.flatten
     }
 
     /**
@@ -478,7 +477,7 @@ object distributed extends Serializable  {
      * @return item based model
      */
     def getItemBasedModel2: Array[(String, (String, Double))] = {
-      ctx.parallelize(songs, slicesRatio).map(song => ItemBasedModel.getRanks2(song).seq).collect.flatten
+      ctx.parallelize(songs, numberSlices).map(song => ItemBasedModel.getRanks2(song).seq).collect.flatten
     }
 
     /**
@@ -493,7 +492,7 @@ object distributed extends Serializable  {
                                   ibm: Array[(String, (String, Double))],
                                   alpha: Double = 0.5): Array[(String, (String, Double))] = {
 
-      ctx.parallelize(ubm.zip(ibm), slicesRatio) map {
+      ctx.parallelize(ubm.zip(ibm), numberSlices) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
@@ -517,7 +516,7 @@ object distributed extends Serializable  {
       val length = ubm.length
       val itemBasedThreshold = (itemBasedPercentage * length).toInt
       // zip lists to get a list of couples (((user, song, rank_user), (user, song, rank_item)), index)
-      ctx.parallelize(ubm.zip(ibm).zipWithIndex, slicesRatio) map{
+      ctx.parallelize(ubm.zip(ibm).zipWithIndex, numberSlices) map{
         // for each pair
         case (couple, index) => couple match {
           case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
@@ -542,7 +541,7 @@ object distributed extends Serializable  {
                            itemBasedProbability: Double = 0.5): Array[(String, (String, Double))] = {
       val random = new Random
       // zip lists to get a list of couples ((user, song, rank_user), (user, song, rank_item))
-      ctx.parallelize(ubm.zip(ibm), slicesRatio) map {
+      ctx.parallelize(ubm.zip(ibm), numberSlices) map {
         // for each pair
         case ((user1, (song1, rank1)), (user2, (song2, rank2))) =>
           if ((user1 != user2) || (song1 != song2)) System.exit(2) // Catch error during zip
