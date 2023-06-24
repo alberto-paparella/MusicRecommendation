@@ -274,9 +274,9 @@ parallelize over test users and vice versa), to study their behaviour over diffe
 
 For each model, its mean average precision (mAP) value is reported.
 
-| TrainUsers | TestUsers | Songs   | NewSongs | ubm           | ibm         | lcm          | am           | scm         |
-|------------|-----------|---------|----------|---------------|-------------|--------------|--------------|-------------|
-| 1000       | 100       | 28720   | 2176     |  0.0385800219 | 0.142942848 | 0.1369886698 | 0.0950991402 | 0.101490377 |
+| Songs   | NewSongs | ubm           | ibm         | lcm          | am           | scm         |
+|---------|----------|---------------|-------------|--------------|--------------|-------------|
+| 28720   | 2176     |  0.0385800219 | 0.142942848 | 0.1369886698 | 0.0950991402 | 0.101490377 |
 
 Classification:
 1. Item based model
