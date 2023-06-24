@@ -556,427 +556,392 @@ Classification:
 </details>
 
 <details>
-<summary>Seq and Par GCP with 100 train users and 10 test users</summary>
-
-* Elapsed time for (Sequential) user-based model:	58175ms (58175637838ns)
-* Elapsed time for (Parallel) user-based model:	53851ms (53851335760ns)
-* Elapsed time for (Sequential) item-based model:	95395ms (95395813912ns)
-* Elapsed time for (Parallel) item-based model:	52474ms (52474346061ns)
-* Elapsed time for (Sequential) linear-combination model:	43ms (43001399ns)
-* Elapsed time for (Parallel) linear-combination model:	30ms (30947247ns)
-* Elapsed time for (Sequential) aggregation model:	37ms (37521982ns)
-* Elapsed time for (Parallel) aggregation model:	71ms (71014601ns)
-* Elapsed time for (Sequential) stochastic-combination model:	29ms (29390764ns)
-* Elapsed time for (Parallel) stochastic-combination model:	21ms (21979575ns)
-* Elapsed time for (Sequential) user-based model mAP:	452ms (452958276ns)
-* Elapsed time for (Parallel) user-based model mAP:	207ms (207369356ns)
-* Elapsed time for (Sequential) item-based model mAP:	576ms (576920448ns)
-* Elapsed time for (Parallel) item-based model mAP:	355ms (355273819ns)
-* Elapsed time for (Sequential) linear-combination model mAP:	510ms (510430481ns)
-* Elapsed time for (Parallel) linear-combination model mAP:	299ms (299033756ns)
-* Elapsed time for (Sequential) aggregation model mAP:	395ms (395335099ns)
-* Elapsed time for (Parallel) aggregation model mAP:	216ms (216700655ns)
-* Elapsed time for (Sequential) stochastic-combination model mAP:	339ms (339214053ns)
-* Elapsed time for (Parallel) stochastic-combination model mAP:	195ms (195296050ns)
-* (Sequential) user-based model mAP: 0.0618047983
-* (Parallel) user-based model mAP: 0.0618047983
-* (Sequential) item-based model mAP: 0.0990458015
-* (Parallel) item-based model mAP: 0.0990458015
-* (Sequential) linear-combination model mAP: 0.1025445293
-* (Parallel) linear-combination model mAP: 0.1025445293
-* (Sequential) aggregation model model mAP: 0.0637131952
-* (Parallel) aggregation model mAP: 0.0637131952
-* (Sequential) stochastic-combination model mAP: 0.0682569975
-* (Parallel) stochastic-combination model mAP: 0.0751272265
-
-</details>
-
-
-<details>
-<summary>Distributed GCP with 100 train users and 10 test users, using getUserBasedModel2 and getItemBasedModel1</summary>
+	<summary>GCP with 100 train users and 10 test users</summary>
 
 * Songs: 4798
 * New songs: 262
-* Elapsed time for (Distributed) user-based:	42351ms (42351342324ns)
-* Elapsed time for (Distributed) item-based:	7790ms (7790517548ns)
+* Elapsed time for (Sequential) user-based model:	58175ms (58175637838ns)
+* Elapsed time for (Parallel) user-based model:	53851ms (53851335760ns)
+* Elapsed time for (Distributed) user-based1:	32020ms (32020236095ns)
+* Elapsed time for (Distributed) user-based2:	42351ms (42351342324ns)
+* Elapsed time for (Sequential) item-based model:	95395ms (95395813912ns)
+* Elapsed time for (Parallel) item-based model:	52474ms (52474346061ns)
+* Elapsed time for (Distributed) item-based1:	7790ms (7790517548ns)
+* Elapsed time for (Distributed) item-based2:	7126ms (7126385975ns)
+* Elapsed time for (Sequential) linear-combination model:	43ms (43001399ns)
+* Elapsed time for (Parallel) linear-combination model:	30ms (30947247ns)
 * Elapsed time for (Distributed) linear combination:	929ms (929160615ns)
+* Elapsed time for (Sequential) aggregation model:	37ms (37521982ns)
+* Elapsed time for (Parallel) aggregation model:	71ms (71014601ns)
 * Elapsed time for (Distributed) aggregation model:	658ms (658879738ns)
+* Elapsed time for (Sequential) stochastic-combination model:	29ms (29390764ns)
+* Elapsed time for (Parallel) stochastic-combination model:	21ms (21979575ns)
 * Elapsed time for (Distributed) stochastic combination model:	484ms (484372595ns)
+* Elapsed time for (Sequential) user-based model mAP:	452ms (452958276ns)
+* Elapsed time for (Parallel) user-based model mAP:	207ms (207369356ns)
 * Elapsed time for (Distributed) user-based model mAP:	635ms (635369429ns)
+* Elapsed time for (Sequential) item-based model mAP:	576ms (576920448ns)
+* Elapsed time for (Parallel) item-based model mAP:	355ms (355273819ns)
 * Elapsed time for (Distributed) item-based model mAP:	387ms (387956319ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	510ms (510430481ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	299ms (299033756ns)
 * Elapsed time for (Distributed) linear-combination model mAP:	377ms (377338776ns)
+* Elapsed time for (Sequential) aggregation model mAP:	395ms (395335099ns)
+* Elapsed time for (Parallel) aggregation model mAP:	216ms (216700655ns)
 * Elapsed time for (Distributed) aggregation model mAP:	425ms (425087107ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	339ms (339214053ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	195ms (195296050ns)
 * Elapsed time for (Distributed) stochastic-combination model mAP:	343ms (343252870ns)
+* (Sequential) user-based model mAP: 0.0618047983
+* (Parallel) user-based model mAP: 0.0618047983
 * (Distributed) user-based model mAP: 0.0618047983
+* (Sequential) item-based model mAP: 0.0990458015
+* (Parallel) item-based model mAP: 0.0990458015
 * (Distributed) item-based model mAP: 0.0990458015
+* (Sequential) linear-combination model mAP: 0.1025445293
+* (Parallel) linear-combination model mAP: 0.1025445293
 * (Distributed) linear-combination model mAP: 0.1025445293
+* (Sequential) aggregation model model mAP: 0.0637131952
+* (Parallel) aggregation model mAP: 0.0637131952
 * (Distributed) aggregation model model mAP: 0.0637131952
+* (Sequential) stochastic-combination model mAP: 0.0682569975
+* (Parallel) stochastic-combination model mAP: 0.0751272265
 * (Distributed) stochastic-combination model mAP: 0.069692839
 
 </details>
 
 <details>
-<summary>Distributed GCP with 100 train users and 10 test users, using getUserBasedModel1 and getItemBasedModel2</summary>
-
-* Songs: 4798
-* New songs: 262
-* Elapsed time for (Distributed) user-based:	32020ms (32020236095ns)
-* Elapsed time for (Distributed) item-based:	7126ms (7126385975ns)
-* Elapsed time for (Distributed) linear combination:	521ms (521414388ns)
-* Elapsed time for (Distributed) aggregation model:	628ms (628711776ns)
-* Elapsed time for (Distributed) stochastic combination model:	1346ms (1346838062ns)
-* Elapsed time for (Distributed) user-based model mAP:	908ms (908155864ns)
-* Elapsed time for (Distributed) item-based model mAP:	584ms (584983866ns)
-* Elapsed time for (Distributed) linear-combination model mAP:	671ms (671932285ns)
-* Elapsed time for (Distributed) aggregation model mAP:	472ms (472163770ns)
-* Elapsed time for (Distributed) stochastic-combination model mAP:	415ms (415774440ns)
-* (Distributed) user-based model mAP: 0.0618047983
-* (Distributed) item-based model mAP: 0.0990458015
-* (Distributed) linear-combination model mAP: 0.1025445293
-* (Distributed) aggregation model model mAP: 0.0637131952
-* (Distributed) stochastic-combination model mAP: 0.0737277354
-
-</details>
-
-<details>
-<summary>Seq and Par GCP with 100 train users and 50 test users</summary>
-
-* Elapsed time for (Sequential) user-based model:	655528ms (655528740788ns)
-* Elapsed time for (Parallel) user-based model:	359120ms (359120014416ns)
-* Elapsed time for (Sequential) item-based model:	732643ms (732643430327ns)
-* Elapsed time for (Parallel) item-based model:	376764ms (376764789156ns)
-* Elapsed time for (Sequential) linear-combination model:	114ms (114233213ns)
-* Elapsed time for (Parallel) linear-combination model:	103ms (103899498ns)
-* Elapsed time for (Sequential) aggregation model:	283ms (283632211ns)
-* Elapsed time for (Parallel) aggregation model:	240ms (240741137ns)
-* Elapsed time for (Sequential) stochastic-combination model:	148ms (148734243ns)
-* Elapsed time for (Parallel) stochastic-combination model:	98ms (98070158ns)
-* Elapsed time for (Sequential) user-based model mAP:	6940ms (6940301366ns)
-* Elapsed time for (Parallel) user-based model mAP:	3809ms (3809971695ns)
-* Elapsed time for (Sequential) item-based model mAP:	7571ms (7571172538ns)
-* Elapsed time for (Parallel) item-based model mAP:	3945ms (3945749021ns)
-* Elapsed time for (Sequential) linear-combination model mAP:	7336ms (7336390079ns)
-* Elapsed time for (Parallel) linear-combination model mAP:	3966ms (3966774390ns)
-* Elapsed time for (Sequential) aggregation model mAP:	8849ms (8849501325ns)
-* Elapsed time for (Parallel) aggregation model mAP:	4630ms (4630480849ns)
-* Elapsed time for (Sequential) stochastic-combination model mAP:	6581ms (6581419016ns)
-* Elapsed time for (Parallel) stochastic-combination model mAP:	3488ms (3488122302ns)
-* (Sequential) user-based model mAP: 0.0320140683
-* (Parallel) user-based model mAP: 0.0320140683
-* (Sequential) item-based model mAP: 0.0730435327
-* (Parallel) item-based model mAP: 0.0730435327
-* (Sequential) linear-combination model mAP: 0.0732291573
-* (Parallel) linear-combination model mAP: 0.0732291573
-* (Sequential) aggregation model model mAP: 0.0461427795
-* (Parallel) aggregation model mAP: 0.0461427795
-* (Sequential) stochastic-combination model mAP: 0.0544634029
-* (Parallel) stochastic-combination model mAP: 0.0468094833
-
-</details>
-
-<details>
-	<summary>Distributed GCP with 100 train users and 50 test users, using getUserBasedModel2 and getItemBasedModel1</summary>
+	<summary>GCP with 100 train users and 50 test users</summary>
 
 * Songs: 5679
 * New songs: 1394
-* Elapsed time for (Distributed) user-based:	213722ms (213722236503ns)
-* Elapsed time for (Distributed) item-based:	98225ms (98225442292ns)
+* Elapsed time for (Sequential) user-based model:	655528ms (655528740788ns)
+* Elapsed time for (Parallel) user-based model:	359120ms (359120014416ns)
+* Elapsed time for (Distributed) user-based1:	95183ms (95183929502ns)
+* Elapsed time for (Distributed) user-based2:	213722ms (213722236503ns)
+* Elapsed time for (Sequential) item-based model:	732643ms (732643430327ns)
+* Elapsed time for (Parallel) item-based model:	376764ms (376764789156ns)
+* Elapsed time for (Distributed) item-based1:	98225ms (98225442292ns)
+* Elapsed time for (Distributed) item-based2:	27701ms (27701237273ns)
+* Elapsed time for (Sequential) linear-combination model:	114ms (114233213ns)
+* Elapsed time for (Parallel) linear-combination model:	103ms (103899498ns)
 * Elapsed time for (Distributed) linear combination:	2560ms (2560212721ns)
+* Elapsed time for (Sequential) aggregation model:	283ms (283632211ns)
+* Elapsed time for (Parallel) aggregation model:	240ms (240741137ns)
 * Elapsed time for (Distributed) aggregation model:	2439ms (2439683732ns)
+* Elapsed time for (Sequential) stochastic-combination model:	148ms (148734243ns)
+* Elapsed time for (Parallel) stochastic-combination model:	98ms (98070158ns)
 * Elapsed time for (Distributed) stochastic combination model:	2060ms (2060960893ns)
+* Elapsed time for (Sequential) user-based model mAP:	6940ms (6940301366ns)
+* Elapsed time for (Parallel) user-based model mAP:	3809ms (3809971695ns)
 * Elapsed time for (Distributed) user-based model mAP:	4465ms (4465218766ns)
+* Elapsed time for (Sequential) item-based model mAP:	7571ms (7571172538ns)
+* Elapsed time for (Parallel) item-based model mAP:	3945ms (3945749021ns)
 * Elapsed time for (Distributed) item-based model mAP:	4964ms (4964142348ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	7336ms (7336390079ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	3966ms (3966774390ns)
 * Elapsed time for (Distributed) linear-combination model mAP:	4092ms (4092735442ns)
+* Elapsed time for (Sequential) aggregation model mAP:	8849ms (8849501325ns)
+* Elapsed time for (Parallel) aggregation model mAP:	4630ms (4630480849ns)
 * Elapsed time for (Distributed) aggregation model mAP:	5817ms (5817036211ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	6581ms (6581419016ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	3488ms (3488122302ns)
 * Elapsed time for (Distributed) stochastic-combination model mAP:	3103ms (3103679799ns)
+* (Sequential) user-based model mAP: 0.0320140683
+* (Parallel) user-based model mAP: 0.0320140683
 * (Distributed) user-based model mAP: 0.0320140683
+* (Sequential) item-based model mAP: 0.0730435327
+* (Parallel) item-based model mAP: 0.0730435327
 * (Distributed) item-based model mAP: 0.0730435327
+* (Sequential) linear-combination model mAP: 0.0732291573
+* (Parallel) linear-combination model mAP: 0.0732291573
 * (Distributed) linear-combination model mAP: 0.0732291573
+* (Sequential) aggregation model model mAP: 0.0461427795
+* (Parallel) aggregation model mAP: 0.0461427795
 * (Distributed) aggregation model model mAP: 0.0461427795
+* (Sequential) stochastic-combination model mAP: 0.0544634029
+* (Parallel) stochastic-combination model mAP: 0.0468094833
 * (Distributed) stochastic-combination model mAP: 0.0528467816
 
 </details>
 
 <details>
-	<summary>Distributed GCP with 100 train users and 50 test users, using getUserBasedModel1 and getItemBasedModel2</summary>
-
-* Songs: 5679
-* New songs: 1394
-* Elapsed time for (Distributed) user-based:	95183ms (95183929502ns)
-* Elapsed time for (Distributed) item-based:	27701ms (27701237273ns)
-* Elapsed time for (Distributed) linear combination:	1745ms (1745899065ns)
-* Elapsed time for (Distributed) aggregation model:	1928ms (1928825992ns)
-* Elapsed time for (Distributed) stochastic combination model:	2303ms (2303520062ns)
-* Elapsed time for (Distributed) user-based model mAP:	4626ms (4626857098ns)
-* Elapsed time for (Distributed) item-based model mAP:	4868ms (4868769420ns)
-* Elapsed time for (Distributed) linear-combination model mAP:	5187ms (5187041129ns)
-* Elapsed time for (Distributed) aggregation model mAP:	5753ms (5753293075ns)
-* Elapsed time for (Distributed) stochastic-combination model mAP:	3356ms (3356232892ns)
-* (Distributed) user-based model mAP: 0.0320140683
-* (Distributed) item-based model mAP: 0.0730435327
-* (Distributed) linear-combination model mAP: 0.0732291573
-* (Distributed) aggregation model model mAP: 0.0461427795
-* (Distributed) stochastic-combination model mAP: 0.0527522747
-
-</details>
-
-<details>
-	<summary>Seq and Par GCP with 100 train users and 100 test users</summary>
-
-* Elapsed time for (Sequential) user-based model:	1453406ms (1453406413461ns)
-* Elapsed time for (Parallel) user-based model:	733755ms (733755635985ns)
-* Elapsed time for (Sequential) item-based model:	1803859ms (1803859724567ns)
-* Elapsed time for (Parallel) item-based model:	1061279ms (1061279555871ns)
-* Elapsed time for (Sequential) linear-combination model:	305ms (305689384ns)
-* Elapsed time for (Parallel) linear-combination model:	403ms (403991220ns)
-* Elapsed time for (Sequential) aggregation model:	457ms (457062157ns)
-* Elapsed time for (Parallel) aggregation model:	386ms (386013535ns)
-* Elapsed time for (Sequential) stochastic-combination model:	577ms (577378045ns)
-* Elapsed time for (Parallel) stochastic-combination model:	389ms (389767363ns)
-* Elapsed time for (Sequential) user-based model mAP:	20357ms (20357906557ns)
-* Elapsed time for (Parallel) user-based model mAP:	10999ms (10999264390ns)
-* Elapsed time for (Sequential) item-based model mAP:	23144ms (23144904340ns)
-* Elapsed time for (Parallel) item-based model mAP:	12996ms (12996608280ns)
-* Elapsed time for (Sequential) linear-combination model mAP:	22430ms (22430335776ns)
-* Elapsed time for (Parallel) linear-combination model mAP:	11414ms (11414745953ns)
-* Elapsed time for (Sequential) aggregation model mAP:	24708ms (24708000927ns)
-* Elapsed time for (Parallel) aggregation model mAP:	13230ms (13230178771ns)
-* Elapsed time for (Sequential) stochastic-combination model mAP:	20616ms (20616275484ns)
-* Elapsed time for (Parallel) stochastic-combination model mAP:	10746ms (10746474657ns)
-* (Sequential) user-based model mAP: 0.0165354986
-* (Parallel) user-based model mAP: 0.0165354986
-* (Sequential) item-based model mAP: 0.0394516174
-* (Parallel) item-based model mAP: 0.0394516174
-* (Sequential) linear-combination model mAP: 0.0404551622
-* (Parallel) linear-combination model mAP: 0.0404551622
-* (Sequential) aggregation model model mAP: 0.026037198
-* (Parallel) aggregation model mAP: 0.026037198
-* (Sequential) stochastic-combination model mAP: 0.0301067135
-* (Parallel) stochastic-combination model mAP: 0.0280217284
-
-</details>
-
-<details>
-	<summary>Distributed GCP with 100 train users and 100 test users, using getUserBasedModel2 and getItemBasedModel1</summary>
+	<summary>GCP with 100 train users and 100 test users</summary>
 
 * Songs: 6620
 * New songs: 2480
-* Elapsed time for (Distributed) user-based:	424269ms (424269381726ns)
-* Elapsed time for (Distributed) item-based:	193660ms (193660286090ns)
+* Elapsed time for (Sequential) user-based model:	1453406ms (1453406413461ns)
+* Elapsed time for (Parallel) user-based model:	733755ms (733755635985ns)
+* Elapsed time for (Distributed) user-based1:	147121ms (147121170586ns)
+* Elapsed time for (Distributed) user-based2:	424269ms (424269381726ns)
+* Elapsed time for (Sequential) item-based model:	1803859ms (1803859724567ns)
+* Elapsed time for (Parallel) item-based model:	1061279ms (1061279555871ns)
+* Elapsed time for (Distributed) item-based1:	193660ms (193660286090ns)
+* Elapsed time for (Distributed) item-based2:	68685ms (68685996627ns)
+* Elapsed time for (Sequential) linear-combination model:	305ms (305689384ns)
+* Elapsed time for (Parallel) linear-combination model:	403ms (403991220ns)
 * Elapsed time for (Distributed) linear combination:	4315ms (4315320767ns)
+* Elapsed time for (Sequential) aggregation model:	457ms (457062157ns)
+* Elapsed time for (Parallel) aggregation model:	386ms (386013535ns)
 * Elapsed time for (Distributed) aggregation model:	6069ms (6069394901ns)
+* Elapsed time for (Sequential) stochastic-combination model:	577ms (577378045ns)
+* Elapsed time for (Parallel) stochastic-combination model:	389ms (389767363ns)
 * Elapsed time for (Distributed) stochastic combination model:	3783ms (3783811305ns)
+* Elapsed time for (Sequential) user-based model mAP:	20357ms (20357906557ns)
+* Elapsed time for (Parallel) user-based model mAP:	10999ms (10999264390ns)
 * Elapsed time for (Distributed) user-based model mAP:	10193ms (10193798538ns)
+* Elapsed time for (Sequential) item-based model mAP:	23144ms (23144904340ns)
+* Elapsed time for (Parallel) item-based model mAP:	12996ms (12996608280ns)
 * Elapsed time for (Distributed) item-based model mAP:	11333ms (11333303544ns)
-* 23/06/23 08:18:04 WARN DAGScheduler: Broadcasting large task binary with size 1663.6 KiB
+* Elapsed time for (Sequential) linear-combination model mAP:	22430ms (22430335776ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	11414ms (11414745953ns)
 * Elapsed time for (Distributed) linear-combination model mAP:	18913ms (18913232322ns)
-* 23/06/23 08:18:23 WARN DAGScheduler: Broadcasting large task binary with size 1716.8 KiB
+* Elapsed time for (Sequential) aggregation model mAP:	24708ms (24708000927ns)
+* Elapsed time for (Parallel) aggregation model mAP:	13230ms (13230178771ns)
 * Elapsed time for (Distributed) aggregation model mAP:	18505ms (18505648503ns)
-* 23/06/23 08:18:42 WARN DAGScheduler: Broadcasting large task binary with size 1638.6 KiB
+* Elapsed time for (Sequential) stochastic-combination model mAP:	20616ms (20616275484ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	10746ms (10746474657ns)
 * Elapsed time for (Distributed) stochastic-combination model mAP:	11020ms (11020421021ns)
+* (Sequential) user-based model mAP: 0.0165354986
+* (Parallel) user-based model mAP: 0.0165354986
 * (Distributed) user-based model mAP: 0.0165354986
+* (Sequential) item-based model mAP: 0.0394516174
+* (Parallel) item-based model mAP: 0.0394516174
 * (Distributed) item-based model mAP: 0.0394516174
+* (Sequential) linear-combination model mAP: 0.0404551622
+* (Parallel) linear-combination model mAP: 0.0404551622
 * (Distributed) linear-combination model mAP: 0.0404551622
+* (Sequential) aggregation model model mAP: 0.026037198
+* (Parallel) aggregation model mAP: 0.026037198
 * (Distributed) aggregation model model mAP: 0.026037198
+* (Sequential) stochastic-combination model mAP: 0.0301067135
+* (Parallel) stochastic-combination model mAP: 0.0280217284
 * (Distributed) stochastic-combination model mAP: 0.0290859303
 
 </details>
 
 <details>
-	<summary>Distributed GCP with 100 train users and 100 test users, using getUserBasedModel1 and getItemBasedModel2</summary>
-
-* Songs: 6620
-* New songs: 2480
-* Elapsed time for (Distributed) user-based:	147121ms (147121170586ns)
-* Elapsed time for (Distributed) item-based:	68685ms (68685996627ns)
-* Elapsed time for (Distributed) linear combination:	3864ms (3864882809ns)
-* Elapsed time for (Distributed) aggregation model:	3758ms (3758324700ns)
-* Elapsed time for (Distributed) stochastic combination model:	4124ms (4124738296ns)
-* 23/06/22 18:41:14 WARN DAGScheduler: Broadcasting large task binary with size 1628.3 KiB
-* Elapsed time for (Distributed) user-based model mAP:	15893ms (15893028271ns)
-* Elapsed time for (Distributed) item-based model mAP:	14460ms (14460303378ns)
-* 23/06/22 18:41:44 WARN DAGScheduler: Broadcasting large task binary with size 1664.5 KiB
-* Elapsed time for (Distributed) linear-combination model mAP:	15368ms (15368221873ns)
-* 23/06/22 18:42:00 WARN DAGScheduler: Broadcasting large task binary with size 1717.3 KiB
-* Elapsed time for (Distributed) aggregation model mAP:	17006ms (17006778219ns)
-* 23/06/22 18:42:17 WARN DAGScheduler: Broadcasting large task binary with size 1638.3 KiB
-* Elapsed time for (Distributed) stochastic-combination model mAP:	15308ms (15308466705ns)
-* (Distributed) user-based model mAP: 0.0165354986
-* (Distributed) item-based model mAP: 0.0394516174
-* (Distributed) linear-combination model mAP: 0.0404551622
-* (Distributed) aggregation model model mAP: 0.026037198
-* (Distributed) stochastic-combination model mAP: 0.0271765646
-
-
-</details>
-
-<details>
-	<summary>Seq and Par GCP with 200 train users and 10 test users</summary>
-
-* Elapsed time for (Sequential) user-based model:	272104ms (272104848879ns)
-* Elapsed time for (Parallel) user-based model:	146988ms (146988939783ns)
-* Elapsed time for (Sequential) item-based model:	249830ms (249830617586ns)
-* Elapsed time for (Parallel) item-based model:	113650ms (113650211767ns)
-* Elapsed time for (Sequential) linear-combination model:	47ms (47410182ns)
-* Elapsed time for (Parallel) linear-combination model:	32ms (32178193ns)
-* Elapsed time for (Sequential) aggregation model:	69ms (69162881ns)
-* Elapsed time for (Parallel) aggregation model:	49ms (49962981ns)
-* Elapsed time for (Sequential) stochastic-combination model:	42ms (42390397ns)
-* Elapsed time for (Parallel) stochastic-combination model:	45ms (45704704ns)
-* Elapsed time for (Sequential) user-based model mAP:	467ms (467654374ns)
-* Elapsed time for (Parallel) user-based model mAP:	371ms (371685224ns)
-* Elapsed time for (Sequential) item-based model mAP:	862ms (862356942ns)
-* Elapsed time for (Parallel) item-based model mAP:	520ms (520080699ns)
-* Elapsed time for (Sequential) linear-combination model mAP:	709ms (709940618ns)
-* Elapsed time for (Parallel) linear-combination model mAP:	469ms (469383492ns)
-* Elapsed time for (Sequential) aggregation model mAP:	578ms (578254604ns)
-* Elapsed time for (Parallel) aggregation model mAP:	390ms (390699269ns)
-* Elapsed time for (Sequential) stochastic-combination model mAP:	574ms (574419748ns)
-* Elapsed time for (Parallel) stochastic-combination model mAP:	272ms (272123627ns)
-* (Sequential) user-based model mAP: 0.0674074074
-* (Parallel) user-based model mAP: 0.0674074074
-* (Sequential) item-based model mAP: 0.1117592593
-* (Parallel) item-based model mAP: 0.1117592593
-* (Sequential) linear-combination model mAP: 0.1085185185
-* (Parallel) linear-combination model mAP: 0.1085185185
-* (Sequential) aggregation model model mAP: 0.1066666667
-* (Parallel) aggregation model mAP: 0.1066666667
-* (Sequential) stochastic-combination model mAP: 0.1040740741
-* (Parallel) stochastic-combination model mAP: 0.0989814815
-
-</details>
-
-<details>
-	<summary>Distributed GCP with 200 train users and 10 test users, using getUserBasedModel2 and getItemBasedModel1</summary>
+	<summary>GCP with 200 train users and 10 test users</summary>
 
 * Songs: 8763
 * New songs: 180
-* Elapsed time for (Distributed) user-based:	95462ms (95462669753ns)
-* Elapsed time for (Distributed) item-based:	47734ms (47734644822ns)
+* Elapsed time for (Sequential) user-based model:	272104ms (272104848879ns)
+* Elapsed time for (Parallel) user-based model:	146988ms (146988939783ns)
+* Elapsed time for (Distributed) user-based1:	59725ms (59725581508ns)
+* Elapsed time for (Distributed) user-based2:	95462ms (95462669753ns)
+* Elapsed time for (Sequential) item-based model:	249830ms (249830617586ns)
+* Elapsed time for (Parallel) item-based model:	113650ms (113650211767ns)
+* Elapsed time for (Distributed) item-based1:	47734ms (47734644822ns)
+* Elapsed time for (Distributed) item-based2:	18244ms (18244475993ns)
+* Elapsed time for (Sequential) linear-combination model:	47ms (47410182ns)
+* Elapsed time for (Parallel) linear-combination model:	32ms (32178193ns)
 * Elapsed time for (Distributed) linear combination:	1604ms (1604338317ns)
+* Elapsed time for (Sequential) aggregation model:	69ms (69162881ns)
+* Elapsed time for (Parallel) aggregation model:	49ms (49962981ns)
 * Elapsed time for (Distributed) aggregation model:	1231ms (1231156378ns)
+* Elapsed time for (Sequential) stochastic-combination model:	42ms (42390397ns)
+* Elapsed time for (Parallel) stochastic-combination model:	45ms (45704704ns)
 * Elapsed time for (Distributed) stochastic combination model:	1137ms (1137404684ns)
+* Elapsed time for (Sequential) user-based model mAP:	467ms (467654374ns)
+* Elapsed time for (Parallel) user-based model mAP:	371ms (371685224ns)
 * Elapsed time for (Distributed) user-based model mAP:	1290ms (1290212320ns)
+* Elapsed time for (Sequential) item-based model mAP:	862ms (862356942ns)
+* Elapsed time for (Parallel) item-based model mAP:	520ms (520080699ns)
 * Elapsed time for (Distributed) item-based model mAP:	1090ms (1090271325ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	709ms (709940618ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	469ms (469383492ns)
 * Elapsed time for (Distributed) linear-combination model mAP:	741ms (741782964ns)
+* Elapsed time for (Sequential) aggregation model mAP:	578ms (578254604ns)
+* Elapsed time for (Parallel) aggregation model mAP:	390ms (390699269ns)
 * Elapsed time for (Distributed) aggregation model mAP:	550ms (550742238ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	574ms (574419748ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	272ms (272123627ns)
 * Elapsed time for (Distributed) stochastic-combination model mAP:	617ms (617888150ns)
+* (Sequential) user-based model mAP: 0.0674074074
+* (Parallel) user-based model mAP: 0.0674074074
 * (Distributed) user-based model mAP: 0.0674074074
+* (Sequential) item-based model mAP: 0.1117592593
+* (Parallel) item-based model mAP: 0.1117592593
 * (Distributed) item-based model mAP: 0.1117592593
+* (Sequential) linear-combination model mAP: 0.1085185185
+* (Parallel) linear-combination model mAP: 0.1085185185
 * (Distributed) linear-combination model mAP: 0.1085185185
+* (Sequential) aggregation model model mAP: 0.1066666667
+* (Parallel) aggregation model mAP: 0.1066666667
 * (Distributed) aggregation model model mAP: 0.1066666667
+* (Sequential) stochastic-combination model mAP: 0.1040740741
+* (Parallel) stochastic-combination model mAP: 0.0989814815
 * (Distributed) stochastic-combination model mAP: 0.0757407407
 
 </details>
 
 <details>
-	<summary>Distributed GCP with 200 train users and 10 test users, using getUserBasedModel1 and getItemBasedModel2</summary>
-
-* Songs: 8763
-* New songs: 180
-* Elapsed time for (Distributed) user-based:	59725ms (59725581508ns)
-* Elapsed time for (Distributed) item-based:	18244ms (18244475993ns)
-* Elapsed time for (Distributed) linear combination:	911ms (911470873ns)
-* Elapsed time for (Distributed) aggregation model:	681ms (681274754ns)
-* Elapsed time for (Distributed) stochastic combination model:	1406ms (1406018383ns)
-* Elapsed time for (Distributed) user-based model mAP:	1058ms (1058157811ns)
-* Elapsed time for (Distributed) item-based model mAP:	1067ms (1067241132ns)
-* Elapsed time for (Distributed) linear-combination model mAP:	691ms (691960193ns)
-* Elapsed time for (Distributed) aggregation model mAP:	565ms (565462311ns)
-* Elapsed time for (Distributed) stochastic-combination model mAP:	676ms (676224754ns)
-* (Distributed) user-based model mAP: 0.0674074074
-* (Distributed) item-based model mAP: 0.1117592593
-* (Distributed) linear-combination model mAP: 0.1085185185
-* (Distributed) aggregation model model mAP: 0.1066666667
-* (Distributed) stochastic-combination model mAP: 0.085
-
-</details>
-
-<details>
-	<summary>Seq and Par GCP with 300 train users and 10 test users</summary>
-
-Elapsed time for (Sequential) user-based model:	513474ms (513474835482ns)
-Elapsed time for (Parallel) user-based model:	220897ms (220897243579ns)
-Elapsed time for (Sequential) item-based model:	635022ms (635022705931ns)
-Elapsed time for (Parallel) item-based model:	378365ms (378365846228ns)
-Elapsed time for (Sequential) linear-combination model:	60ms (60638515ns)
-Elapsed time for (Parallel) linear-combination model:	49ms (49544830ns)
-Elapsed time for (Sequential) aggregation model:	76ms (76549110ns)
-Elapsed time for (Parallel) aggregation model:	46ms (46226635ns)
-Elapsed time for (Sequential) stochastic-combination model:	61ms (61203819ns)
-Elapsed time for (Parallel) stochastic-combination model:	43ms (43150582ns)
-Elapsed time for (Sequential) user-based model mAP:	1003ms (1003983244ns)
-Elapsed time for (Parallel) user-based model mAP:	524ms (524008462ns)
-Elapsed time for (Sequential) item-based model mAP:	1385ms (1385536381ns)
-Elapsed time for (Parallel) item-based model mAP:	756ms (756806573ns)
-Elapsed time for (Sequential) linear-combination model mAP:	1122ms (1122234784ns)
-Elapsed time for (Parallel) linear-combination model mAP:	706ms (706187033ns)
-Elapsed time for (Sequential) aggregation model mAP:	958ms (958655855ns)
-Elapsed time for (Parallel) aggregation model mAP:	510ms (510040426ns)
-Elapsed time for (Sequential) stochastic-combination model mAP:	929ms (929581272ns)
-Elapsed time for (Parallel) stochastic-combination model mAP:	568ms (568268995ns)
-(Sequential) user-based model mAP: 0.1521579869
-(Parallel) user-based model mAP: 0.1521579869
-(Sequential) item-based model mAP: 0.2049370919
-(Parallel) item-based model mAP: 0.2049370919
-(Sequential) linear-combination model mAP: 0.2063306259
-(Parallel) linear-combination model mAP: 0.2063306259
-(Sequential) aggregation model model mAP: 0.1652810957
-(Parallel) aggregation model mAP: 0.1652810957
-(Sequential) stochastic-combination model mAP: 0.1789417105
-(Parallel) stochastic-combination model mAP: 0.1798375538
-
-
-</details>
-
-<details>
-	<summary>Distributed GCP with 300 train users and 10 test users, using getUserBasedModel2 and getItemBasedModel1</summary>
+	<summary>GCP with 300 train users and 10 test users</summary>
 
 * Songs: 11660
 * New songs: 299
-* Elapsed time for (Distributed) user-based:	202068ms (202068498129ns)
-* Elapsed time for (Distributed) item-based:	109075ms (109075509142ns)
+* Elapsed time for (Sequential) user-based model:	513474ms (513474835482ns)
+* Elapsed time for (Parallel) user-based model:	220897ms (220897243579ns)
+* Elapsed time for (Distributed) user-based1:	162974ms (162974656940ns)
+* Elapsed time for (Distributed) user-based2:	202068ms (202068498129ns)
+* Elapsed time for (Sequential) item-based model:	635022ms (635022705931ns)
+* Elapsed time for (Parallel) item-based model:	378365ms (378365846228ns)
+* Elapsed time for (Distributed) item-based1:	109075ms (109075509142ns)
+* Elapsed time for (Distributed) item-based2:	42347ms (42347346322ns)
+* Elapsed time for (Sequential) linear-combination model:	60ms (60638515ns)
+* Elapsed time for (Parallel) linear-combination model:	49ms (49544830ns)
 * Elapsed time for (Distributed) linear combination:	1704ms (1704897767ns)
+* Elapsed time for (Sequential) aggregation model:	76ms (76549110ns)
 * Elapsed time for (Distributed) aggregation model:	1223ms (1223364907ns)
+* Elapsed time for (Parallel) aggregation model:	46ms (46226635ns)
+* Elapsed time for (Sequential) stochastic-combination model:	61ms (61203819ns)
+* Elapsed time for (Parallel) stochastic-combination model:	43ms (43150582ns)
 * Elapsed time for (Distributed) stochastic combination model:	1176ms (1176701812ns)
+* Elapsed time for (Sequential) user-based model mAP:	1003ms (1003983244ns)
+* Elapsed time for (Parallel) user-based model mAP:	524ms (524008462ns)
 * Elapsed time for (Distributed) user-based model mAP:	1136ms (1136203413ns)
+* Elapsed time for (Sequential) item-based model mAP:	1385ms (1385536381ns)
+* Elapsed time for (Parallel) item-based model mAP:	756ms (756806573ns)
 * Elapsed time for (Distributed) item-based model mAP:	1164ms (1164101859ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	1122ms (1122234784ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	706ms (706187033ns)
 * Elapsed time for (Distributed) linear-combination model mAP:	1074ms (1074936398ns)
+* Elapsed time for (Sequential) aggregation model mAP:	958ms (958655855ns)
+* Elapsed time for (Parallel) aggregation model mAP:	510ms (510040426ns)
 * Elapsed time for (Distributed) aggregation model mAP:	985ms (985196120ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	929ms (929581272ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	568ms (568268995ns)
 * Elapsed time for (Distributed) stochastic-combination model mAP:	1476ms (1476176598ns)
+* (Sequential) user-based model mAP: 0.1521579869
+* (Parallel) user-based model mAP: 0.1521579869
 * (Distributed) user-based model mAP: 0.1521579869
+* (Sequential) item-based model mAP: 0.2049370919
+* (Parallel) item-based model mAP: 0.2049370919
 * (Distributed) item-based model mAP: 0.2049370919
+* (Sequential) linear-combination model mAP: 0.2063306259
+* (Parallel) linear-combination model mAP: 0.2063306259
 * (Distributed) linear-combination model mAP: 0.2063306259
+* (Sequential) aggregation model model mAP: 0.1652810957
+* (Parallel) aggregation model mAP: 0.1652810957
 * (Distributed) aggregation model model mAP: 0.1652810957
+* (Sequential) stochastic-combination model mAP: 0.1789417105
+* (Parallel) stochastic-combination model mAP: 0.1798375538
 * (Distributed) stochastic-combination model mAP: 0.1719222806
 
 </details>
 
 <details>
-	<summary>Distributed GCP with 300 train users and 10 test users, using getUserBasedModel1 and getItemBasedModel2</summary>
+	<summary>GCP with 400 train users and 10 test users</summary>
 
-* Songs: 11660
-* New songs: 299
-* Elapsed time for (Distributed) user-based:	162974ms (162974656940ns)
-* Elapsed time for (Distributed) item-based:	42347ms (42347346322ns)
-* Elapsed time for (Distributed) linear combination:	918ms (918045291ns)
-* Elapsed time for (Distributed) aggregation model:	986ms (986831227ns)
-* Elapsed time for (Distributed) stochastic combination model:	2064ms (2064897954ns)
-* Elapsed time for (Distributed) user-based model mAP:	1627ms (1627228718ns)
-* Elapsed time for (Distributed) item-based model mAP:	1306ms (1306772877ns)
-* Elapsed time for (Distributed) linear-combination model mAP:	1111ms (1111567383ns)
-* Elapsed time for (Distributed) aggregation model mAP:	939ms (939018111ns)
-* Elapsed time for (Distributed) stochastic-combination model mAP:	885ms (885720315ns)
-* (Distributed) user-based model mAP: 0.1521579869
-* (Distributed) item-based model mAP: 0.2049370919
-* (Distributed) linear-combination model mAP: 0.2063306259
-* (Distributed) aggregation model model mAP: 0.1652810957
-* (Distributed) stochastic-combination model mAP: 0.1730928492
+* Songs: 14497
+* New songs: 155
+* Elapsed time for (Sequential) user-based model:	832376ms (832376707399ns)
+* Elapsed time for (Parallel) user-based model:	384275ms (384275605015ns)
+* Elapsed time for (Distributed) user-based1:	155877ms (155877622249ns)
+* Elapsed time for (Distributed) user-based2:	125346ms (125346254580ns)
+* Elapsed time for (Sequential) item-based model:	625668ms (625668772218ns)
+* Elapsed time for (Parallel) item-based model:	301811ms (301811331916ns)
+* Elapsed time for (Distributed) item-based1:	70841ms (70841287114ns)
+* Elapsed time for (Distributed) item-based2:	66695ms (66695686731ns)
+* Elapsed time for (Sequential) linear-combination model:	81ms (81285222ns)
+* Elapsed time for (Parallel) linear-combination model:	131ms (131164707ns)
+* Elapsed time for (Distributed) linear combination:	1721ms (1721914413ns)
+* Elapsed time for (Sequential) aggregation model:	101ms (101266968ns)
+* Elapsed time for (Parallel) aggregation model:	84ms (84696671ns)
+* Elapsed time for (Distributed) aggregation model:	1851ms (1851172322ns)
+* Elapsed time for (Sequential) stochastic-combination model:	70ms (70677752ns)
+* Elapsed time for (Parallel) stochastic-combination model:	67ms (67535615ns)
+* Elapsed time for (Distributed) stochastic combination model:	1270ms (1270652268ns)
+* Elapsed time for (Sequential) user-based model mAP:	826ms (826859843ns)
+* Elapsed time for (Parallel) user-based model mAP:	550ms (550445058ns)
+* Elapsed time for (Distributed) user-based model mAP:	933ms (933694767ns)
+* Elapsed time for (Sequential) item-based model mAP:	1065ms (1065890482ns)
+* Elapsed time for (Parallel) item-based model mAP:	754ms (754424823ns)
+* Elapsed time for (Distributed) item-based model mAP:	685ms (685739359ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	990ms (990476621ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	685ms (685955805ns)
+* Elapsed time for (Distributed) linear-combination model mAP:	885ms (885055663ns)
+* Elapsed time for (Sequential) aggregation model mAP:	800ms (800535461ns)
+* Elapsed time for (Parallel) aggregation model mAP:	574ms (574064035ns)
+* Elapsed time for (Distributed) aggregation model mAP:	598ms (598422401ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	775ms (775346316ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	506ms (506862046ns)
+* Elapsed time for (Distributed) stochastic-combination model mAP:	668ms (668666705ns)
+* (Sequential) user-based model mAP: 0.143609831
+* (Parallel) user-based model mAP: 0.143609831
+* (Distributed) user-based model mAP: 0.143609831
+* (Sequential) item-based model mAP: 0.1968356375
+* (Parallel) item-based model mAP: 0.1968356375
+* (Distributed) item-based model mAP: 0.1968356375
+* (Sequential) linear-combination model mAP: 0.2011367127
+* (Parallel) linear-combination model mAP: 0.2011367127
+* (Distributed) linear-combination model mAP: 0.2011367127
+* (Sequential) aggregation model model mAP: 0.1312442396
+* (Parallel) aggregation model mAP: 0.1312442396
+* (Distributed) aggregation model model mAP: 0.1312442396
+* (Sequential) stochastic-combination model mAP: 0.1812442396
+* (Parallel) stochastic-combination model mAP: 0.181781874
+* (Distributed) stochastic-combination model mAP: 0.1753302611
 
 </details>
 
 <details>
-<summary>Distributed GCP with 1000 train users and 10 test users</summary>
+	<summary>GCP with 500 train users and 10 test users</summary>
+
+* Songs: 16785
+* New songs: 244
+* Elapsed time for (Sequential) user-based model:	1635081ms (1635081337343ns)
+* Elapsed time for (Parallel) user-based model:	799185ms (799185599123ns)
+* Elapsed time for (Distributed) user-based1:	313024ms (313024202265ns)
+* Elapsed time for (Distributed) user-based2:	250710ms (250710844884ns)
+* Elapsed time for (Sequential) item-based model:	1334183ms (1334183493280ns)
+* Elapsed time for (Parallel) item-based model:	622275ms (622275174180ns)
+* Elapsed time for (Distributed) item-based1:	138590ms (138590795829ns)
+* Elapsed time for (Distributed) item-based2:	114828ms (114828347368ns)
+* Elapsed time for (Sequential) linear-combination model:	80ms (80275271ns)
+* Elapsed time for (Parallel) linear-combination model:	78ms (78162441ns)
+* Elapsed time for (Distributed) linear combination:	2095ms (2095842940ns)
+* Elapsed time for (Sequential) aggregation model:	122ms (122355039ns)
+* Elapsed time for (Parallel) aggregation model:	75ms (75601571ns)
+* Elapsed time for (Distributed) aggregation model:	2055ms (2055686834ns)
+* Elapsed time for (Sequential) stochastic-combination model:	241ms (241857960ns)
+* Elapsed time for (Parallel) stochastic-combination model:	139ms (139012745ns)
+* Elapsed time for (Distributed) stochastic combination model:	1636ms (1636384274ns)
+* Elapsed time for (Sequential) user-based model mAP:	1502ms (1502964618ns)
+* Elapsed time for (Parallel) user-based model mAP:	894ms (894087673ns)
+* Elapsed time for (Distributed) user-based model mAP:	1118ms (1118585507ns)
+* Elapsed time for (Sequential) item-based model mAP:	1426ms (1426947763ns)
+* Elapsed time for (Parallel) item-based model mAP:	835ms (835000030ns)
+* Elapsed time for (Distributed) item-based model mAP:	999ms (999477942ns)
+* Elapsed time for (Sequential) linear-combination model mAP:	1253ms (1253600616ns)
+* Elapsed time for (Parallel) linear-combination model mAP:	847ms (847565595ns)
+* Elapsed time for (Distributed) linear-combination model mAP:	1032ms (1032727448ns)
+* Elapsed time for (Sequential) aggregation model mAP:	1253ms (1253506318ns)
+* Elapsed time for (Parallel) aggregation model mAP:	681ms (681685749ns)
+* Elapsed time for (Distributed) aggregation model mAP:	1011ms (1011418927ns)
+* Elapsed time for (Sequential) stochastic-combination model mAP:	1012ms (1012065861ns)
+* Elapsed time for (Parallel) stochastic-combination model mAP:	564ms (564852782ns)
+* Elapsed time for (Distributed) stochastic-combination model mAP:	928ms (928529292ns)
+* (Sequential) user-based model mAP: 0.1661316029
+* (Parallel) user-based model mAP: 0.1661316029
+* (Distributed) user-based model mAP: 0.1661316029
+* (Sequential) item-based model mAP: 0.280976776
+* (Parallel) item-based model mAP: 0.280976776
+* (Distributed) item-based model mAP: 0.280976776
+* (Sequential) linear-combination model mAP: 0.2721116315
+* (Parallel) linear-combination model mAP: 0.2721116315
+* (Distributed) linear-combination model mAP: 0.2721116315
+* (Sequential) aggregation model model mAP: 0.2748162243
+* (Parallel) aggregation model mAP: 0.2748162243
+* (Distributed) aggregation model model mAP: 0.2748162243
+* (Sequential) stochastic-combination model mAP: 0.2300172391
+* (Parallel) stochastic-combination model mAP: 0.2035031226
+* (Distributed) stochastic-combination model mAP: 0.210296318
+
+</details>
+
+<details>
+<summary>GCP with 1000 train users and 10 test users</summary>
 
 * Songs: 17748
 * New songs: 1885
@@ -1001,7 +966,7 @@ Elapsed time for (Parallel) stochastic-combination model mAP:	568ms (568268995ns
 </details>
 
 <details>
-<summary>Distributed GCP with 1000 train users and 100 test users</summary>
+<summary>GCP with 1000 train users and 100 test users</summary>
 
 * Songs: 28720
 * New songs: 2176
