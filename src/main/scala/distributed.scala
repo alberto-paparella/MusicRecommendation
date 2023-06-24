@@ -8,7 +8,6 @@ import scala.io.{BufferedSource, Source}
 import scala.language.postfixOps
 import scala.math.sqrt
 import scala.util.Random
-import scala.collection.parallel.ParSeq
 import scala.collection.parallel.mutable.ParArray
 
 object distributed extends Serializable  {
@@ -62,7 +61,7 @@ object distributed extends Serializable  {
     def trainUsersN: Integer = if (args.length >= 2) args(0).toInt else 100
     def testUsersN: Integer = if (args.length >= 2) args(1).toInt else 10
 
-    if (verbose) println(s"Train users: ${trainUsersN}\nTest users: ${testUsersN}")
+    if (verbose) println(s"Train users: $trainUsersN\nTest users: $testUsersN")
 
     // import train and test datasets
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")

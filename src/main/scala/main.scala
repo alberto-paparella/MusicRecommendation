@@ -1,8 +1,6 @@
 import music_recommandation.MusicRecommender
 import my_utils.MyUtils
-import org.apache.avro.generic.GenericArray
 
-import scala.collection.GenSeq
 import scala.collection.parallel.mutable.ParArray
 import scala.io._
 import scala.language._
@@ -17,7 +15,7 @@ object main {
     def trainUsersN: Integer = if(args.length >= 2) args(0).toInt else 100
     def testUsersN: Integer = if(args.length >= 2) args(1).toInt else 10
 
-    if(verbose) println(s"Train users: ${trainUsersN}\nTest users: ${testUsersN}")
+    if(verbose) println(s"Train users: $trainUsersN\nTest users: $testUsersN")
 
     // import train and test datasets
     def train: BufferedSource = Source.fromResource(s"train_${trainUsersN}_$testUsersN.txt")
@@ -36,15 +34,15 @@ object main {
       itemBasedModel: Array[(String, (String, Double))],
       itemBasedModelP: ParArray[(String, (String, Double))]
       ) = if (verbose) (
-        MyUtils.time(musicRecommender.getUserBasedModel(), "(Sequential) user-based model"),
-        MyUtils.time(musicRecommender.getUserBasedModelP(), "(Parallel) user-based model"),
-        MyUtils.time(musicRecommender.getItemBasedModel(), "(Sequential) item-based model"),
-        MyUtils.time(musicRecommender.getItemBasedModelP(), "(Parallel) item-based model")
+        MyUtils.time(musicRecommender.getUserBasedModel, "(Sequential) user-based model"),
+        MyUtils.time(musicRecommender.getUserBasedModelP, "(Parallel) user-based model"),
+        MyUtils.time(musicRecommender.getItemBasedModel, "(Sequential) item-based model"),
+        MyUtils.time(musicRecommender.getItemBasedModelP, "(Parallel) item-based model")
       ) else (
-        musicRecommender.getUserBasedModel(),
-        musicRecommender.getUserBasedModelP(),
-        musicRecommender.getItemBasedModel(),
-        musicRecommender.getItemBasedModelP()
+        musicRecommender.getUserBasedModel,
+        musicRecommender.getUserBasedModelP,
+        musicRecommender.getItemBasedModel,
+        musicRecommender.getItemBasedModelP
       )
 
     // saving models to file (both sequential and parallel)
