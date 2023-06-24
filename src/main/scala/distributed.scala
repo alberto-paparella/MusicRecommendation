@@ -58,7 +58,7 @@ object distributed extends Serializable  {
     val verbose = true
 
     // number of train and test users (available datasets: 100_10, 100_50, 100_100, 500_10, 500_50, 500_100, ...)
-    def trainUsersN: Integer = if (args.length >= 2) args(0).toInt else 100
+    def trainUsersN: Integer = if (args.length >= 2) args(0).toInt else 300
     def testUsersN: Integer = if (args.length >= 2) args(1).toInt else 10
 
     if (verbose) println(s"Train users: $trainUsersN\nTest users: $testUsersN")
@@ -72,9 +72,9 @@ object distributed extends Serializable  {
 
     // instantiate spark context
     // local execution
-    // val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
+    val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     // gcp execution
-    val conf = new SparkConf().setAppName("MusicRecommendation")
+    //val conf = new SparkConf().setAppName("MusicRecommendation")
     val ctx = new SparkContext(conf)
 
     // store all songs from both files
@@ -426,7 +426,6 @@ object distributed extends Serializable  {
        * @return the mAP of the model
        */
       def meanAveragePrecision(model: Array[(String, (String, Double))]): Double = {
-        //averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
         //averagePrecision(model).collect().map(ap => ap._2).sum / newSongs.length
         averagePrecision(model).map(ap => ap._2).sum / newSongs.length
       }
