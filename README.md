@@ -936,3 +936,72 @@ Elapsed time for (Parallel) stochastic-combination model mAP:	568ms (568268995ns
 * (Distributed) stochastic-combination model mAP: 0.1730928492
 
 </details>
+
+<details>
+	<summary>Distributed GCP with 1000 train users and 10 test users</summary>
+
+* Songs: 17748
+* New songs: 1885
+* Elapsed time for (Distributed) user-based1:	1484891ms (1484891183020ns)
+* 23/06/23 15:06:31 WARN DAGScheduler: Broadcasting large task binary with size 1798.8 KiB
+* Elapsed time for (Distributed) item-based1:	574715ms (574715471321ns)
+* Elapsed time for (Distributed) user-based2:	1420594ms (1420594878316ns)
+* 23/06/23 15:39:46 WARN DAGScheduler: Broadcasting large task binary with size 1798.8 KiB
+* Elapsed time for (Distributed) item-based2:	606498ms (606498590813ns)
+* 23/06/23 15:49:57 WARN TaskSetManager: Stage 4 contains a task of very large size (1080 KiB). The maximum recommended task size is 1000 KiB.
+* Elapsed time for (Distributed) linear combination:	11212ms (11212173798ns)
+* 23/06/23 15:50:08 WARN TaskSetManager: Stage 5 contains a task of very large size (1236 KiB). The maximum recommended task size is 1000 KiB.
+* Elapsed time for (Distributed) aggregation model:	12169ms (12169649857ns)
+* 23/06/23 15:50:20 WARN TaskSetManager: Stage 6 contains a task of very large size (1080 KiB). The maximum recommended task size is 1000 KiB.
+* Elapsed time for (Distributed) stochastic combination model:	10572ms (10572380416ns)
+* 23/06/23 15:50:35 WARN DAGScheduler: Broadcasting large task binary with size 5.0 MiB
+* Elapsed time for (Distributed) user-based model mAP:	12487ms (12487388953ns)
+* 23/06/23 15:50:47 WARN DAGScheduler: Broadcasting large task binary with size 5.2 MiB
+* Elapsed time for (Distributed) item-based model mAP:	13396ms (13396437813ns)
+* 23/06/23 15:51:00 WARN DAGScheduler: Broadcasting large task binary with size 5.2 MiB
+* Elapsed time for (Distributed) linear-combination model mAP:	13107ms (13107499441ns)
+* 23/06/23 15:51:14 WARN DAGScheduler: Broadcasting large task binary with size 5.1 MiB
+* Elapsed time for (Distributed) aggregation model mAP:	12161ms (12161913984ns)
+* 23/06/23 15:51:26 WARN DAGScheduler: Broadcasting large task binary with size 5.1 MiB
+* Elapsed time for (Distributed) stochastic-combination model mAP:	11728ms (11728255668ns)
+* (Distributed) user-based model mAP: 0.0308797122
+* (Distributed) item-based model mAP: 0.1107832411
+* (Distributed) linear-combination model mAP: 0.1128872417
+* (Distributed) aggregation model model mAP: 0.0713676829
+* (Distributed) stochastic-combination model mAP: 0.0811107242
+
+</details>
+
+<details>
+	<summary>Distributed GCP with 1000 train users and 100 test users</summary>
+
+* Songs: 28720
+* New songs: 2176
+* 23/06/23 19:09:28 WARN DAGScheduler: Broadcasting large task binary with size 1277.7 KiB
+* Elapsed time for (Distributed) user-based1:	6456360ms (6456360527017ns)
+* 23/06/23 20:57:04 WARN DAGScheduler: Broadcasting large task binary with size 3.2 MiB
+* Elapsed time for (Distributed) item-based1:	2188633ms (2188633285944ns)
+* 23/06/23 21:33:32 WARN DAGScheduler: Broadcasting large task binary with size 1277.7 KiB
+* Elapsed time for (Distributed) user-based2:	5607922ms (5607922651110ns)
+* 23/06/23 23:07:00 WARN DAGScheduler: Broadcasting large task binary with size 3.2 MiB
+* Elapsed time for (Distributed) item-based2:	2940547ms (2940547519188ns)
+* Elapsed time for (Distributed) linear combination:	24083ms (24083653467ns)
+* Elapsed time for (Distributed) aggregation model:	25625ms (25625904375ns)
+* Elapsed time for (Distributed) stochastic combination model:	23222ms (23222672280ns)
+* 23/06/23 23:57:25 WARN DAGScheduler: Broadcasting large task binary with size 11.9 MiB
+* Elapsed time for (Distributed) user-based model mAP:	69804ms (69804751039ns)
+* 23/06/23 23:58:35 WARN DAGScheduler: Broadcasting large task binary with size 12.2 MiB
+* Elapsed time for (Distributed) item-based model mAP:	72479ms (72479420315ns)
+* 23/06/23 23:59:48 WARN DAGScheduler: Broadcasting large task binary with size 12.1 MiB
+* Elapsed time for (Distributed) linear-combination model mAP:	71194ms (71194940111ns)
+* 23/06/24 00:00:59 WARN DAGScheduler: Broadcasting large task binary with size 12.1 MiB
+* Elapsed time for (Distributed) aggregation model mAP:	70002ms (70002738736ns)
+* 23/06/24 00:02:09 WARN DAGScheduler: Broadcasting large task binary with size 12.0 MiB
+* Elapsed time for (Distributed) stochastic-combination model mAP:	69433ms (69433599409ns)
+* (Distributed) user-based model mAP: 0.0385800219
+* (Distributed) item-based model mAP: 0.142942848
+* (Distributed) linear-combination model mAP: 0.1369886698
+* (Distributed) aggregation model model mAP: 0.0950991402
+* (Distributed) stochastic-combination model mAP: 0.101490377
+
+</details>
