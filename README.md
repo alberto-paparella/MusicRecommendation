@@ -142,7 +142,7 @@ exponentially while the number of songs stays the same.
 
 ## Experiments
 
-We designed three experiments: the first two are meant to compare the scalability of the proposed solution and the
+We designed three kind of experiments: the first two are meant to compare the scalability of the proposed solution and the
 efficiency of the models scaling on the number of test (1) or train (2) users, while the third one is meant to compare
 the models to find which one is the best, using as evaluation function the mean average precision, following the
 challenge spirit in which the problem has first been proposed (Kaggle); this is done only on the distributed version on
@@ -286,6 +286,34 @@ Classification:
 5. User based model
 
 ![map](images/map.png)
+
+### Models comparison over 2000 train users and 100 test users
+
+For each model, its mean average precision (mAP) value is reported.
+
+| Songs   | NewSongs | ubm           | ibm          | lcm          | am           | scm         |
+|---------|----------|---------------|--------------|--------------|--------------|-------------|
+| 44451   | 1865     |  0.0296820445 | 0.1549078628 | 0.0923070961 | 0.0770281485 | 0.0666806146 |
+
+Classification:
+1. Item based model
+2. Linear combination model
+3. Aggregation model
+4. Stochastic combination model
+5. User based model
+
+![map2000](images/map2000.png)
+
+### Some notes about combination models and future experiments
+
+All combination models have been realized such that a parameter `alpha` specifies how to weight the contributions from
+the user based and the item based model (as `alpha` and `1 - alpha`, respectively). This means that one could eventually
+try all combinations of contributions from the two models, possibly finding a value for `alpha` such that at least the
+linear combination model gives better results than one singular model (in out case, the item based model), as it happens
+in the paper. For example, in our case one could think to weight the item based model more than the user based one
+(`alpha=0.5` by default, giving the same weights to both models). It is also possible to calculate the two models
+separately and then importing them in a new execution to try these experiments on combinations without the need to
+recompute both models each time.
 
 ### Experiment logs
 
