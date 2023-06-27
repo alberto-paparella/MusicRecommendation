@@ -72,9 +72,9 @@ object distributed extends Serializable  {
 
     // instantiate spark context
     // local execution
-    val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
+    //val conf = new SparkConf().setAppName("MusicRecommendation").setMaster("local[*]")
     // gcp execution
-    //val conf = new SparkConf().setAppName("MusicRecommendation")
+    val conf = new SparkConf().setAppName("MusicRecommendation")
     val ctx = new SparkContext(conf)
 
     // store all songs from both files
@@ -550,7 +550,7 @@ object distributed extends Serializable  {
     }
 
     // songs >> users, nodes << cores per node (or songs << users, nodes >> cores per node)
-    val ubModel = MyUtils.time(getUserBasedModel2, "(Distributed) user-based2")
+    val ubModel = MyUtils.time(getUserBasedModel1, "(Distributed) user-based1")
     val ibModel = MyUtils.time(getItemBasedModel1, "(Distributed) item-based1")
 
     // songs >> users, nodes >> cores per node (or songs << users, nodes << cores per node)

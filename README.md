@@ -989,3 +989,26 @@ Classification:
 * (Distributed) stochastic-combination model mAP: 0.101490377
 
 </details>
+
+<details>
+	<summary>GCP with 2000 train users and 100 test users</summary>
+
+* Songs: 44451
+* New songs: 1865
+* Elapsed time for (Distributed) user-based1:	24727672ms (24727672988947ns)
+* Elapsed time for (Distributed) item-based1:	16157675ms (16157675183404ns)
+* Elapsed time for (Distributed) linear combination:	60038ms (60038994146ns)
+* Elapsed time for (Distributed) aggregation model:	61191ms (61191362477ns)
+* Elapsed time for (Distributed) stochastic combination model:	50780ms (50780938492ns)
+* Elapsed time for (Distributed) user-based model mAP:	68756ms (68756818058ns)
+* Elapsed time for (Distributed) item-based model mAP:	74989ms (74989210957ns)
+* Elapsed time for (Distributed) linear-combination model mAP:	62710ms (62710235048ns)
+* Elapsed time for (Distributed) aggregation model mAP:	62156ms (62156142078ns)
+* Elapsed time for (Distributed) stochastic-combination model mAP:	62575ms (62575104084ns)
+* (Distributed) user-based model mAP: 0.0296820445
+* (Distributed) item-based model mAP: 0.1549078628
+* (Distributed) linear-combination model mAP: 0.0923070961
+* (Distributed) aggregation model model mAP: 0.0770281485
+* (Distributed) stochastic-combination model mAP: 0.0666806146
+
+</details>
